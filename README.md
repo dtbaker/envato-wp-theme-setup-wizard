@@ -1,7 +1,9 @@
 # Envato WordPress Theme Setup Wizard
 A step by step setup wizard that runs after a ThemeForest theme has been activated.
 ## Video Demo:
-Best to watch this video demo to see exactly what this plugin does: https://www.youtube.com/watch?v=vMey1BrKP_A
+Best to watch this video demo to see exactly what this plugin does:
+[![ScreenShot](https://img.youtube.com/vi/vMey1BrKP_A/0.jpg)](https://www.youtube.com/watch?v=vMey1BrKP_A)
+
 ## Setup Instructions
 - Copy the `api` folder onto your web server ( e.g. yoursite.com/envato/api/ ) - it's best if this is hosted on SSL
 - This API folder will handle oAuth login for automatic theme updates in the (new) Envato Market plugin.
