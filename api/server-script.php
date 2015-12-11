@@ -31,7 +31,11 @@ if(isset($_REQUEST['oauth_nonce']) && empty($_SESSION['oauth_nonce'])){
 	// only people with this private key can request a token or a refresh of a token.
 	$_SESSION['oauth_nonce'] = $_REQUEST['oauth_nonce'];
 }
-if(empty($_SESSION['wp_return']) || !filter_var($_SESSION['wp_return'], FILTER_VALIDATE_URL) || empty($_REQUEST['oauth_nonce'])){
+if(isset($_REQUEST['bounce_nonce'])){
+	// bounce nonce used for redirect back to wordpress with code for token.
+	$_SESSION['bounce_nonce'] = $_REQUEST['bounce_nonce'];
+}
+if(empty($_SESSION['wp_return']) || !filter_var($_SESSION['wp_return'], FILTER_VALIDATE_URL)){
 	die('Failed to find WordPress return URL. Please report this error to the item author.');
 }
 if(isset($_REQUEST['get_token'])){
@@ -85,91 +89,91 @@ if(!empty($_REQUEST['code'])){
 	}
 	?>
 
-<!doctype html>
-<html>
-<head>
-    <meta charset="utf-8">
-	<title>Loading...</title>
-	<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
-    <link href="//fonts.googleapis.com/css?family=Roboto:400,100,300,700" rel="stylesheet" type="text/css">
-</head>
-<style type="text/css">
-    body{
-        background: #1E201F;
-        -webkit-font-smoothing: antialiased;
-        font-family: "Roboto", "Helvetica Neue", Helvetica, sans-serif;
-        font-size: 14px;
-        font-weight: 400;
-        line-height: 1.6;
-    }
-    #shub_page{
-        max-width: 1200px;
-        margin:40px auto;
-    }
-    #shub_wrapper h1{
-        text-align: center;
-        color: #FFF;
-        margin: 0;
-        padding: 0 0 27px;;
-    }
-    #shub_content{
-        border-radius: 5px;
-        padding: 20px 40px 30px;
-        background: #fff;
-        position: relative;
-    }
-    #shub_content:before{
-        background: #FFFFFF;
-        border-radius: 2px 0 0 0;
-        content: "";
-        display: block;
-        height: 20px;
-        left: 50%;
-        margin-left: -10px;
-        position: absolute;
-        transform: rotate(45deg);
-        top: -10px;
-        width: 20px;
-    }
-    @media (min-width: 640px) {
-        #shub_wrapper {
-            padding-left: 10.0%;
-            padding-right: 10.0%;
-        }
-    }
-    @media (min-width: 1024px){
-        #shub_wrapper {
-            padding-left: 20%;
-            padding-right: 20%;
-        }
-    }
-    .permissions__logo {
-	    display: block;
-	    margin: 0 auto 40px;
-	}
-</style>
-<body>
+	<!doctype html>
+	<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Loading...</title>
+		<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+		<link href="//fonts.googleapis.com/css?family=Roboto:400,100,300,700" rel="stylesheet" type="text/css">
+	</head>
+	<style type="text/css">
+		body{
+			background: #1E201F;
+			-webkit-font-smoothing: antialiased;
+			font-family: "Roboto", "Helvetica Neue", Helvetica, sans-serif;
+			font-size: 14px;
+			font-weight: 400;
+			line-height: 1.6;
+		}
+		#shub_page{
+			max-width: 1200px;
+			margin:40px auto;
+		}
+		#shub_wrapper h1{
+			text-align: center;
+			color: #FFF;
+			margin: 0;
+			padding: 0 0 27px;;
+		}
+		#shub_content{
+			border-radius: 5px;
+			padding: 20px 40px 30px;
+			background: #fff;
+			position: relative;
+		}
+		#shub_content:before{
+			background: #FFFFFF;
+			border-radius: 2px 0 0 0;
+			content: "";
+			display: block;
+			height: 20px;
+			left: 50%;
+			margin-left: -10px;
+			position: absolute;
+			transform: rotate(45deg);
+			top: -10px;
+			width: 20px;
+		}
+		@media (min-width: 640px) {
+			#shub_wrapper {
+				padding-left: 10.0%;
+				padding-right: 10.0%;
+			}
+		}
+		@media (min-width: 1024px){
+			#shub_wrapper {
+				padding-left: 20%;
+				padding-right: 20%;
+			}
+		}
+		.permissions__logo {
+			display: block;
+			margin: 0 auto 40px;
+		}
+	</style>
+	<body>
 
-<div id="shub_page">
-    <div id="shub_wrapper">
-        <img src="https://api.envato.com/images/logo.svg" alt="Envato API" class="permissions__logo">
-        <div id="shub_content">
-            <p>Loading...</p>
-	        <form action="<?php echo htmlspecialchars( $_SESSION['wp_return'] ); ?>" method="POST" id="oauth_submit">
-				<input type="hidden" name="bounce_nonce" value="<?php echo htmlspecialchars( !empty($_REQUEST['bounce_nonce']) ? $_REQUEST['bounce_nonce'] : '' ); ?>">
-				<input type="hidden" name="oauth_session" value="<?php echo htmlspecialchars( session_id() ); ?>">
-				<input type="submit" name="go" value="Click here to continue" id="manual-button">
-			</form>
+	<div id="shub_page">
+		<div id="shub_wrapper">
+			<img src="https://api.envato.com/images/logo.svg" alt="Envato API" class="permissions__logo">
+			<div id="shub_content">
+				<p>Loading...</p>
+				<form action="<?php echo htmlspecialchars( $_SESSION['wp_return'] ); ?>" method="POST" id="oauth_submit">
+					<input type="hidden" name="bounce_nonce" value="<?php echo htmlspecialchars( !empty($_SESSION['bounce_nonce']) ? $_SESSION['bounce_nonce'] : '' ); ?>">
+					<input type="hidden" name="oauth_session" value="<?php echo htmlspecialchars( session_id() ); ?>">
+					<input type="submit" name="go" value="Click here to continue" id="manual-button">
+				</form>
+			</div>
+			<script type="text/javascript">
+				document.getElementById('manual-button').style.display = 'none';
+				document.getElementById('oauth_submit').submit();
+			</script>
 		</div>
-		<script type="text/javascript">
-			document.getElementById('manual-button').style.display = 'none';
-			document.getElementById('oauth_submit').submit();
-		</script>
 	</div>
-</div>
 
-</body>
-</html>
+	</body>
+	</html>
 
 	<?php
 }else if(!empty($_REQUEST['error'])){
