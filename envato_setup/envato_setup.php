@@ -1036,9 +1036,17 @@ class Envato_Theme_Setup_Wizard {
 
 		//add_thickbox();
 
-		if ( !empty( $_POST['oauth_session'] ) && !empty( $_POST['oauth_nonce'] ) && wp_verify_nonce( $_POST['oauth_nonce'], 'envato_oauth_bounce_' . $this->envato_username ) ) {
+		if ( !empty( $_POST['oauth_session'] ) && !empty( $_POST['bounce_nonce'] ) && wp_verify_nonce( $_POST['bounce_nonce'], 'envato_oauth_bounce_' . $this->envato_username ) ) {
 			// request the token from our bounce url.
 			$my_theme = wp_get_theme();
+			$oauth_nonce = get_option('envato_oauth_'.$this->envato_username);
+			if(!$oauth_nonce){
+				// this is our 'private key' that is used to request a token from our api bounce server.
+				// only hosts with this key are allowed to request a token and a refresh token
+				// the first time this key is used, it is set and locked on the server.
+				$oauth_nonce = wp_create_nonce( 'envato_oauth_nonce_' . $this->envato_username );
+				update_option( 'envato_oauth_'.$this->envato_username, $oauth_nonce);
+			}
 			$response = wp_remote_post( $this->oauth_script, array(
 					'method' => 'POST',
 					'timeout' => 15,
@@ -1048,6 +1056,7 @@ class Envato_Theme_Setup_Wizard {
 					'headers' => array(),
 					'body' => array(
 						'oauth_session' => $_POST['oauth_session'],
+						'oauth_nonce' => $oauth_nonce,
 						'get_token' => 'yes',
 						'url' => home_url(),
 						'theme' => $my_theme->get( 'Name' ),
@@ -1112,6 +1121,7 @@ class Envato_Theme_Setup_Wizard {
 			if($token['expires'] < time() + 120 && !empty($token['oauth_session'])){
 				// time to renew this token!
 				$my_theme = wp_get_theme();
+				$oauth_nonce = get_option('envato_oauth_'.$this->envato_username);
 				$response = wp_remote_post( $this->oauth_script, array(
 						'method' => 'POST',
 						'timeout' => 10,
@@ -1121,6 +1131,7 @@ class Envato_Theme_Setup_Wizard {
 						'headers' => array(),
 						'body' => array(
 							'oauth_session' => $token['oauth_session'],
+							'oauth_nonce' => $oauth_nonce,
 							'refresh_token' => 'yes',
 							'url' => home_url(),
 							'theme' => $my_theme->get( 'Name' ),
@@ -1247,7 +1258,7 @@ class Envato_Theme_Setup_Wizard {
 	// we can update the token there.
 
 	public function get_oauth_login_url( $return ) {
-		return $this->oauth_script . '?oauth_nonce=' . wp_create_nonce( 'envato_oauth_bounce_' . $this->envato_username ) . '&wp_return=' . urlencode( $return );
+		return $this->oauth_script . '?bounce_nonce=' . wp_create_nonce( 'envato_oauth_bounce_' . $this->envato_username ) . '&wp_return=' . urlencode( $return );
 	}
 }
 
