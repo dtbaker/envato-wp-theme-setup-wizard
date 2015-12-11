@@ -1158,6 +1158,7 @@ class Envato_Theme_Setup_Wizard {
 					'Authorization' => 'Bearer ' . $token['access_token']
 				)
 			) );
+			self::$_current_manage_token = false;
 			if ( is_array( $response ) && !empty( $response['purchases'] ) ) {
 				// up to here, add to items array
 				foreach ( $response['purchases'] as $purchase ) {
