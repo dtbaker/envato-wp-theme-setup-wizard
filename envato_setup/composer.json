@@ -1,0 +1,19 @@
+{
+  "name": "dtbaker/envato-wp-theme-setup-wizard",
+  "type": "library",
+  "keywords": ["themeforest","envato","wordpress"],
+  "description": "A WordPress installation wizard for ThemeForest items that runs after theme activation.",
+  "homepage": "https://github.com/dtbaker/envato-wp-theme-setup-wizard",
+  "package-path": "envato_setup/",
+  "authors": [
+    {
+      "name": "David Baker",
+      "email": "dtbaker@gmail.com",
+      "homepage": "http://dtbaker.net",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": ">=5.3.0"
+  }
+}
