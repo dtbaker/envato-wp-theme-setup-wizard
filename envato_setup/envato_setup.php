@@ -1159,7 +1159,7 @@ class Envato_Theme_Setup_Wizard {
 				)
 			) );
 			self::$_current_manage_token = false;
-			if ( is_array( $response ) && !empty( $response['purchases'] ) ) {
+			if ( is_array( $response ) && is_array( $response['purchases'] ) ) {
 				// up to here, add to items array
 				foreach ( $response['purchases'] as $purchase ) {
 					// check if this item already exists in the items array.
