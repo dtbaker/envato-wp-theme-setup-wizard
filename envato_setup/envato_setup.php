@@ -25,10 +25,10 @@ if(!defined('ENVATO_THEME_VERSION')){
 class Envato_Theme_Setup_Wizard {
 
 	/** @var string Theme author username, used in check for oauth. */
-	private $envato_username = 'dtbaker';
+	private $envato_username = '';
 
 	/** @var string Full url to server-script.php (available from https://gist.github.com/dtbaker ) */
-	private $oauth_script = 'http://dtbaker.net/files/envato/wptoken/server-script.php';
+	private $oauth_script = '';
 
 
 	/** @var string Currenct Step */
@@ -49,11 +49,23 @@ class Envato_Theme_Setup_Wizard {
 	 * Hook in tabs.
 	 */
 	public function __construct() {
-		$current_theme = wp_get_theme();
+
+    	add_action('after_setup_theme', array( $this, 'load_theme_setup_wizard' ) );
+
+	}
+
+	public function load_theme_setup_wizard(){
+
+    	$current_theme = wp_get_theme();
 		$this->theme_name = strtolower(preg_replace('#[^a-zA-Z]#','',$current_theme->get('Name')));
+		$this->envato_username = apply_filters( $this->theme_name . '_envato_username', 'dtbaker' );
+        $this->oauth_script = apply_filters( $this->theme_name . '_envato_oauth_script', 'http://dtbaker.net/files/envato/wptoken/server-script.php' );
+
 		if ( apply_filters( $this->theme_name . '_enable_setup_wizard', true ) && current_user_can( 'manage_options' )  ) {
+
     		$path = ltrim( end( @explode( get_template(), str_replace( '\\', '/', dirname( __FILE__ ) ) ) ), '/' );
 			$this->public_base_url = trailingslashit( trailingslashit( get_template_directory_uri() ) . $path );
+
 			add_action( 'after_switch_theme', array( $this, 'switch_theme' ) );
 			add_action( 'admin_menu', array( $this, 'admin_menus' ) );
 			add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
@@ -68,6 +80,8 @@ class Envato_Theme_Setup_Wizard {
 			add_filter( 'http_request_args', array( $this, 'envato_market_http_request_args' ), 10, 2 );
 		}
 	}
+
+
 
 	public function enqueue_scripts(){
 	}
