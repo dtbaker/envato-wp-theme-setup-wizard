@@ -51,6 +51,15 @@ if( ! class_exists('Envato_Theme_Setup_Wizard') ){
     	protected $public_base_url = '';
 
         /**
+		 * The slug name to refer to this menu
+		 *
+		 * @since 1.1.1
+		 *
+		 * @var string
+		 */
+		protected $page_slug;
+
+        /**
 		 * A dummy constructor to prevent this class from being loaded more than once.
 		 *
 		 * @see Envato_Theme_Setup_Wizard::instance()
@@ -75,6 +84,7 @@ if( ! class_exists('Envato_Theme_Setup_Wizard') ){
     		$this->theme_name = strtolower(preg_replace('#[^a-zA-Z]#','',$current_theme->get('Name')));
     		$this->envato_username = apply_filters( $this->theme_name . '_envato_username', 'dtbaker' );
             $this->oauth_script = apply_filters( $this->theme_name . '_envato_oauth_script', 'http://dtbaker.net/files/envato/wptoken/server-script.php' );
+            $this->page_slug = apply_filters( $this->theme_name . '_theme_setup_wizard_page_slug', $this->theme_name.'-setup' );
 
             //set relative plugin path url
             $path = ltrim( end( @explode( get_template(), str_replace( '\\', '/', dirname( __FILE__ ) ) ) ), '/' );
@@ -123,7 +133,7 @@ if( ! class_exists('Envato_Theme_Setup_Wizard') ){
     			return;
     		}
     		delete_transient( '_'.$this->theme_name.'_activation_redirect' );
-    		wp_safe_redirect( admin_url( 'themes.php?page='.$this->theme_name.'-setup' ) );
+    		wp_safe_redirect( admin_url( 'themes.php?page='.$this->page_slug ) );
     		exit;
     	}
 
@@ -131,7 +141,7 @@ if( ! class_exists('Envato_Theme_Setup_Wizard') ){
     	 * Add admin menus/screens.
     	 */
     	public function admin_menus() {
-    		add_theme_page(__('Setup Wizard','envato_wizard'), __('Setup Wizard','envato_wizard'), 'manage_options', $this->theme_name.'-setup', array($this,'setup_wizard') );
+    		add_theme_page(__('Setup Wizard','envato_wizard'), __('Setup Wizard','envato_wizard'), 'manage_options', $this->page_slug, array($this,'setup_wizard') );
     	}
 
 
@@ -197,7 +207,7 @@ if( ! class_exists('Envato_Theme_Setup_Wizard') ){
     	 * Show the setup wizard
     	 */
     	public function setup_wizard() {
-    		if ( empty( $_GET['page'] ) || $this->theme_name.'-setup' !== $_GET['page'] ) {
+    		if ( empty( $_GET['page'] ) || $this->page_slug !== $_GET['page'] ) {
     			return;
     		}
     		ob_end_clean();
@@ -243,7 +253,7 @@ if( ! class_exists('Envato_Theme_Setup_Wizard') ){
     	}
 
     	public function get_step_link($step) {
-    		return  add_query_arg( 'step', $step, admin_url('admin.php?page=' .$this->theme_name.'-setup') );
+    		return  add_query_arg( 'step', $step, admin_url('admin.php?page=' .$this->page_slug) );
     	}
     	public function get_next_step_link() {
     		$keys = array_keys( $this->steps );
