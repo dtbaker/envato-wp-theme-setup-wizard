@@ -19,16 +19,16 @@ define('_ENVATO_APP_URL','http://yoursite.com/envato/api/server-script.php');
 ```php
 // Please don't forgot to change filters tag.
 // It must start from your theme's name.
-add_filter('twentyfifteen_envato_username', 'twentyfifteen_set_envato_username', 10);
-if( ! function_exists('twentyfifteen_set_envato_username') ){
-    function twentyfifteen_set_envato_username($username){
+add_filter('twentyfifteen_theme_setup_wizard_username', 'twentyfifteen_set_theme_setup_wizard_username', 10);
+if( ! function_exists('twentyfifteen_set_theme_setup_wizard_username') ){
+    function twentyfifteen_set_theme_setup_wizard_username($username){
         return 'dtbaker';
     }
 }
 
-add_filter('twentyfifteen_envato_oauth_script', 'twentyfifteen_set_envato_oauth_script', 10);
-if( ! function_exists('twentyfifteen_set_envato_oauth_script') ){
-    function twentyfifteen_set_envato_oauth_script($oauth_url){
+add_filter('twentyfifteen_theme_setup_wizard_oauth_script', 'twentyfifteen_set_theme_setup_wizard_oauth_script', 10);
+if( ! function_exists('twentyfifteen_set_theme_setup_wizard_oauth_script') ){
+    function twentyfifteen_set_theme_setup_wizard_oauth_script($oauth_url){
         return 'http://yoursite.com/envato/api/server-script.php';
     }
 }
