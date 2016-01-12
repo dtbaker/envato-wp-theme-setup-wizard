@@ -1218,6 +1218,7 @@ if( ! class_exists('Envato_Theme_Setup_Wizard') ){
     					$result = false;
     					if ( is_array( $new_token ) && !empty( $new_token['new_token'] ) ) {
     						$token['access_token'] = $new_token['new_token'];
+						    $token['expires'] = time() + 3600;
     					}
     				}
     			}
