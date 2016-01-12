@@ -14,11 +14,24 @@ define('_ENVATO_APP_ID','put-your-envato-app-id-here');
 define('_ENVATO_APP_SECRET','put-your-envato-app-secret-here');
 define('_ENVATO_APP_URL','http://yoursite.com/envato/api/server-script.php');
 ```
-- Copy the `envato_setup` folder into your Theme folder.
-- At the top of `envato_setup/envato_setup.php` set your Envato username and the full url to your `server-script.php` file:
+- Copy the `envato_setup` folder into your private $envato_usernameheme folder.
+- In your theme's `functions.php` set your Envato username and the full url to your `server-script.php` file via filters:,
 ```php
-private $envato_username = 'dtbaker';
-private $oauth_script = 'http://yoursite.com/envato/api/server-script.php';
+// Please don't forgot to change filters tag.
+// It must start from your theme's name.
+add_filter('twentyfifteen_theme_setup_wizard_username', 'twentyfifteen_set_theme_setup_wizard_username', 10);
+if( ! function_exists('twentyfifteen_set_theme_setup_wizard_username') ){
+    function twentyfifteen_set_theme_setup_wizard_username($username){
+        return 'dtbaker';
+    }
+}
+
+add_filter('twentyfifteen_theme_setup_wizard_oauth_script', 'twentyfifteen_set_theme_setup_wizard_oauth_script', 10);
+if( ! function_exists('twentyfifteen_set_theme_setup_wizard_oauth_script') ){
+    function twentyfifteen_set_theme_setup_wizard_oauth_script($oauth_url){
+        return 'http://yoursite.com/envato/api/server-script.php';
+    }
+}
 ```
 - Make sure TGMPA is enabled, configured and working correctly in your theme ( see http://tgmpluginactivation.com/ ). This wizard integrates with the latest version of TGM to find which plugins needs to be installed.
 - Make sure the `Envato Market` plugin is added to the required plugin list in TGM, it can be added like this:
