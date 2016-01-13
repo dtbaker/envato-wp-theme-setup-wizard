@@ -59,6 +59,27 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 */
 		protected $page_slug;
 
+        /**
+		 * TGMPA instance storage
+		 *
+		 * @var object
+		 */
+		protected $tgmpa_instance;
+
+        /**
+		 * TGMPA Menu slug
+		 *
+		 * @var string
+		 */
+		protected $tgmpa_menu_slug = 'tgmpa-install-plugins';
+
+		/**
+		 * TGMPA Menu url
+		 *
+		 * @var string
+		 */
+		protected $tgmpa_url = 'themes.php?page=tgmpa-install-plugins';
+
 		/**
 		 * A dummy constructor to prevent this class from being loaded more than once.
 		 *
@@ -102,6 +123,12 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		public function init_actions() {
 			if ( apply_filters( $this->theme_name . '_enable_setup_wizard', true ) && current_user_can( 'manage_options' )  ) {
 				add_action( 'after_switch_theme', array( $this, 'switch_theme' ) );
+
+				if(class_exists( 'TGM_Plugin_Activation' ) && isset($GLOBALS['tgmpa'])) {
+        			add_action( 'init', array( $this, 'get_tgmpa_instanse' ), 30 );
+        			add_action( 'init', array( $this, 'set_tgmpa_url' ), 40 );
+    			}
+
 				add_action( 'admin_menu', array( $this, 'admin_menus' ) );
 				add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 				add_action( 'admin_init', array( $this, 'admin_redirects' ), 30 );
@@ -134,6 +161,33 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			delete_transient( '_'.$this->theme_name.'_activation_redirect' );
 			wp_safe_redirect( admin_url( 'themes.php?page='.$this->page_slug ) );
 			exit;
+		}
+
+		/**
+		 * Get configured TGMPA instance
+		 *
+		 * @access public
+		 * @since 1.1.2
+		 */
+		public function get_tgmpa_instanse(){
+    		$this->tgmpa_instance = call_user_func( array( get_class( $GLOBALS['tgmpa'] ), 'get_instance' ) );
+		}
+
+		/**
+		 * Update $tgmpa_menu_slug and $tgmpa_parent_slug from TGMPA instance
+		 *
+		 * @access public
+		 * @since 1.1.2
+		 */
+		public function set_tgmpa_url(){
+
+            $this->tgmpa_menu_slug = ( property_exists($this->tgmpa_instance, 'menu') ) ? $this->tgmpa_instance->menu : $this->tgmpa_menu_slug;
+            $this->tgmpa_menu_slug = apply_filters($this->theme_name . '_theme_setup_wizard_tgmpa_menu_slug', $this->tgmpa_menu_slug);
+
+            $tgmpa_parent_slug = ( property_exists($this->tgmpa_instance, 'parent_slug') && $this->tgmpa_instance->parent_slug !== 'themes.php' ) ? 'admin.php' : 'themes.php';
+
+            $this->tgmpa_url = apply_filters($this->theme_name . '_theme_setup_wizard_tgmpa_url', $tgmpa_parent_slug.'?page='.$this->tgmpa_menu_slug);
+
 		}
 
 		/**
@@ -220,7 +274,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				'update' => wp_create_nonce( 'tgmpa-update' ),
 				'install' => wp_create_nonce( 'tgmpa-install' ),
 				),
-				'tgm_bulk_url' => admin_url( 'themes.php?page=tgmpa-install-plugins' ),
+				'tgm_bulk_url' => admin_url( $this->tgmpa_url ),
 				'ajaxurl' => admin_url( 'admin-ajax.php' ),
 				'wpnonce' => wp_create_nonce( 'envato_setup_nonce' ),
 				'verify_text' => __( '...verifying','envato_setup' ),
@@ -529,9 +583,9 @@ if ( $show_link ) {
 			foreach ( $plugins['activate'] as $slug => $plugin ) {
 				if ( $_POST['slug'] == $slug ) {
 					$json = array(
-						'url' => admin_url( 'themes.php?page=tgmpa-install-plugins' ),
+						'url' => admin_url( $this->tgmpa_url ),
 						'plugin' => array( $slug ),
-						'tgmpa-page' => 'tgmpa-install-plugins',
+						'tgmpa-page' => $this->tgmpa_menu_slug,
 						'plugin_status' => 'all',
 						'_wpnonce' => wp_create_nonce( 'bulk-plugins' ),
 						'action' => 'tgmpa-bulk-activate',
@@ -544,9 +598,9 @@ if ( $show_link ) {
 			foreach ( $plugins['update'] as $slug => $plugin ) {
 				if ( $_POST['slug'] == $slug ) {
 					$json = array(
-						'url' => admin_url( 'themes.php?page=tgmpa-install-plugins' ),
+						'url' => admin_url( $this->tgmpa_url ),
 						'plugin' => array( $slug ),
-						'tgmpa-page' => 'tgmpa-install-plugins',
+						'tgmpa-page' => $this->tgmpa_menu_slug,
 						'plugin_status' => 'all',
 						'_wpnonce' => wp_create_nonce( 'bulk-plugins' ),
 						'action' => 'tgmpa-bulk-update',
@@ -559,9 +613,9 @@ if ( $show_link ) {
 			foreach ( $plugins['install'] as $slug => $plugin ) {
 				if ( $_POST['slug'] == $slug ) {
 					$json = array(
-						'url' => admin_url( 'themes.php?page=tgmpa-install-plugins' ),
+						'url' => admin_url( $this->tgmpa_url ),
 						'plugin' => array( $slug ),
-						'tgmpa-page' => 'tgmpa-install-plugins',
+						'tgmpa-page' => $this->tgmpa_menu_slug,
 						'plugin_status' => 'all',
 						'_wpnonce' => wp_create_nonce( 'bulk-plugins' ),
 						'action' => 'tgmpa-bulk-install',
