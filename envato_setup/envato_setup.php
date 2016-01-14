@@ -75,6 +75,24 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		protected $page_slug;
 
 		/**
+		 * The slug name for the parent menu
+		 *
+		 * @since 1.1.2
+		 *
+		 * @var string
+		 */
+		protected $page_parent;
+
+		/**
+		 * Complete URL to Setup Wizard
+		 *
+		 * @since 1.1.2
+		 *
+		 * @var string
+		 */
+		protected $page_url;
+
+		/**
 		 * A dummy constructor to prevent this class from being loaded more than once.
 		 *
 		 * @see Envato_Theme_Setup_Wizard::instance()
@@ -99,6 +117,15 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			$this->envato_username = apply_filters( $this->theme_name . '_theme_setup_wizard_username', 'dtbaker' );
 			$this->oauth_script = apply_filters( $this->theme_name . '_theme_setup_wizard_oauth_script', 'http://dtbaker.net/files/envato/wptoken/server-script.php' );
 			$this->page_slug = apply_filters( $this->theme_name . '_theme_setup_wizard_page_slug', $this->theme_name.'-setup' );
+			$this->parent_slug = apply_filters( $this->theme_name . '_theme_setup_wizard_parent_slug', '' );
+
+			//If we have parent slug - set correct url
+			if( $this->parent_slug !== '' ){
+    			$this->page_url = 'admin.php?page='.$this->page_slug;
+			}else{
+    			$this->page_url = 'themes.php?page='.$this->page_slug;
+			}
+			$this->page_url = apply_filters( $this->theme_name . '_theme_setup_wizard_page_url', $this->page_url );
 
 			//set relative plugin path url
 			$this->plugin_path = trailingslashit( $this->cleanFilePath( dirname( __FILE__ ) ) );
@@ -148,7 +175,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				return;
 			}
 			delete_transient( '_'.$this->theme_name.'_activation_redirect' );
-			wp_safe_redirect( admin_url( 'themes.php?page='.$this->page_slug ) );
+			wp_safe_redirect( admin_url( $this->page_url ) );
 			exit;
 		}
 
@@ -156,7 +183,15 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 * Add admin menus/screens.
 		 */
 		public function admin_menus() {
-			add_theme_page( __( 'Setup Wizard','envato_setup' ), __( 'Setup Wizard','envato_setup' ), 'manage_options', $this->page_slug, array( $this, 'setup_wizard' ) );
+
+    		if( $this->is_submenu_page() ){
+        		//prevent Theme Check warning about "themes should use add_theme_page for adding admin pages"
+        		$add_subpage_function = 'add_submenu'.'_page';
+        		$add_subpage_function( $this->parent_slug, __( 'Setup Wizard','envato_setup' ), __( 'Setup Wizard','envato_setup' ), 'manage_options', $this->page_slug, array( $this, 'setup_wizard' ) );
+    		}else{
+        		add_theme_page( __( 'Setup Wizard','envato_setup' ), __( 'Setup Wizard','envato_setup' ), 'manage_options', $this->page_slug, array( $this, 'setup_wizard' ) );
+    		}
+
 		}
 
 
@@ -1388,6 +1423,10 @@ if ( $show_link ) {
                 $path = rtrim( $path, '/' );
             }
             return $path;
+        }
+
+        public function is_submenu_page(){
+            return ( $this->parent_slug == '' ) ? false : true;
         }
 	}
 
