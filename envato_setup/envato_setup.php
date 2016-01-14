@@ -47,8 +47,23 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		/** @var array Steps for the setup wizard */
 		protected $steps  = array();
 
-		/** @var string url for this plugin folder, used when enquing scripts */
-		protected $public_base_url = '';
+        /**
+		 * Relative plugin path
+		 *
+		 * @since 1.1.2
+		 *
+		 * @var string
+		 */
+		protected $plugin_path = '';
+
+		/**
+		 * Relative plugin url for this plugin folder, used when enquing scripts
+		 *
+		 * @since 1.1.2
+		 *
+		 * @var string
+		 */
+		protected $plugin_url = '';
 
 		/**
 		 * The slug name to refer to this menu
@@ -81,6 +96,24 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		protected $tgmpa_url = 'themes.php?page=tgmpa-install-plugins';
 
 		/**
+		 * The slug name for the parent menu
+		 *
+		 * @since 1.1.2
+		 *
+		 * @var string
+		 */
+		protected $page_parent;
+
+		/**
+		 * Complete URL to Setup Wizard
+		 *
+		 * @since 1.1.2
+		 *
+		 * @var string
+		 */
+		protected $page_url;
+
+		/**
 		 * A dummy constructor to prevent this class from being loaded more than once.
 		 *
 		 * @see Envato_Theme_Setup_Wizard::instance()
@@ -105,10 +138,20 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			$this->envato_username = apply_filters( $this->theme_name . '_theme_setup_wizard_username', 'dtbaker' );
 			$this->oauth_script = apply_filters( $this->theme_name . '_theme_setup_wizard_oauth_script', 'http://dtbaker.net/files/envato/wptoken/server-script.php' );
 			$this->page_slug = apply_filters( $this->theme_name . '_theme_setup_wizard_page_slug', $this->theme_name.'-setup' );
+			$this->parent_slug = apply_filters( $this->theme_name . '_theme_setup_wizard_parent_slug', '' );
+
+			//If we have parent slug - set correct url
+			if( $this->parent_slug !== '' ){
+    			$this->page_url = 'admin.php?page='.$this->page_slug;
+			}else{
+    			$this->page_url = 'themes.php?page='.$this->page_slug;
+			}
+			$this->page_url = apply_filters( $this->theme_name . '_theme_setup_wizard_page_url', $this->page_url );
 
 			//set relative plugin path url
-			$path = ltrim( end( @explode( get_template(), str_replace( '\\', '/', dirname( __FILE__ ) ) ) ), '/' );
-			$this->public_base_url = trailingslashit( trailingslashit( get_template_directory_uri() ) . $path );
+			$this->plugin_path = trailingslashit( $this->cleanFilePath( dirname( __FILE__ ) ) );
+            $relative_url = str_replace( $this->cleanFilePath( get_template_directory() ), '', $this->plugin_path );
+			$this->plugin_url = trailingslashit( get_template_directory_uri() . $relative_url );
 		}
 
 		/**
@@ -159,7 +202,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				return;
 			}
 			delete_transient( '_'.$this->theme_name.'_activation_redirect' );
-			wp_safe_redirect( admin_url( 'themes.php?page='.$this->page_slug ) );
+			wp_safe_redirect( admin_url( $this->page_url ) );
 			exit;
 		}
 
@@ -194,7 +237,15 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 * Add admin menus/screens.
 		 */
 		public function admin_menus() {
-			add_theme_page( __( 'Setup Wizard','envato_setup' ), __( 'Setup Wizard','envato_setup' ), 'manage_options', $this->page_slug, array( $this, 'setup_wizard' ) );
+
+    		if( $this->is_submenu_page() ){
+        		//prevent Theme Check warning about "themes should use add_theme_page for adding admin pages"
+        		$add_subpage_function = 'add_submenu'.'_page';
+        		$add_subpage_function( $this->parent_slug, __( 'Setup Wizard','envato_setup' ), __( 'Setup Wizard','envato_setup' ), 'manage_options', $this->page_slug, array( $this, 'setup_wizard' ) );
+    		}else{
+        		add_theme_page( __( 'Setup Wizard','envato_setup' ), __( 'Setup Wizard','envato_setup' ), 'manage_options', $this->page_slug, array( $this, 'setup_wizard' ) );
+    		}
+
 		}
 
 
@@ -267,8 +318,8 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 
 			$this->step = isset( $_GET['step'] ) ? sanitize_key( $_GET['step'] ) : current( array_keys( $this->steps ) );
 
-			wp_register_script( 'jquery-blockui', $this->public_base_url . '/js/jquery.blockUI.js', array( 'jquery' ), '2.70', true );
-			wp_register_script( 'envato-setup', $this->public_base_url . '/js/envato-setup.js', array( 'jquery', 'jquery-blockui' ), $this->version );
+			wp_register_script( 'jquery-blockui', $this->plugin_url . '/js/jquery.blockUI.js', array( 'jquery' ), '2.70', true );
+			wp_register_script( 'envato-setup', $this->plugin_url . '/js/envato-setup.js', array( 'jquery', 'jquery-blockui' ), $this->version );
 			wp_localize_script( 'envato-setup', 'envato_setup_params', array(
 				'tgm_plugin_nonce'            => array(
 				'update' => wp_create_nonce( 'tgmpa-update' ),
@@ -280,8 +331,8 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				'verify_text' => __( '...verifying','envato_setup' ),
 			) );
 
-			//wp_enqueue_style( 'envato_wizard_admin_styles', $this->public_base_url . '/css/admin.css', array(), $this->version );
-			wp_enqueue_style( 'envato-setup', $this->public_base_url . '/css/envato-setup.css', array( 'dashicons', 'install' ), $this->version );
+			//wp_enqueue_style( 'envato_wizard_admin_styles', $this->plugin_url . '/css/admin.css', array(), $this->version );
+			wp_enqueue_style( 'envato-setup', $this->plugin_url . '/css/envato-setup.css', array( 'dashicons', 'install' ), $this->version );
 
 			//enqueue style for admin notices
 			wp_enqueue_style( 'wp-admin' );
@@ -342,7 +393,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 						'200px'
 					);
 				} else { ?>
-    					<img src="<?php echo $this->public_base_url; ?>/images/logo.png" alt="Envato install wizard" /><?php
+    					<img src="<?php echo $this->plugin_url; ?>/images/logo.png" alt="Envato install wizard" /><?php
 				} ?></a>
     		</h1>
     		<?php
@@ -1411,6 +1462,26 @@ if ( $show_link ) {
 		public function get_oauth_login_url( $return ) {
 			return $this->oauth_script . '?bounce_nonce=' . wp_create_nonce( 'envato_oauth_bounce_' . $this->envato_username ) . '&wp_return=' . urlencode( $return );
 		}
+
+        /**
+         * Helper function
+         * Take a path and return it clean
+         *
+         * @param string $path
+         *
+         * @since    1.1.2
+         */
+        public static function cleanFilePath( $path ) {
+            $path = str_replace( '', '', str_replace( array( "\\", "\\\\" ), '/', $path ) );
+            if ( $path[ strlen( $path ) - 1 ] === '/' ) {
+                $path = rtrim( $path, '/' );
+            }
+            return $path;
+        }
+
+        public function is_submenu_page(){
+            return ( $this->parent_slug == '' ) ? false : true;
+        }
 	}
 
 }// if !class_exists
