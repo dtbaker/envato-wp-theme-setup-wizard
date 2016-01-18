@@ -1033,7 +1033,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				<div class="theme-presets">
 					<ul>
 						<?php
-						$current_demo = get_theme_mod( 'theme_style','pink' );
+						$current_demo = get_theme_mod( 'beautiful_site_color','pink' );
 						$demo_styles = apply_filters( 'beautiful_default_styles',array() );
 						foreach ( $demo_styles as $demo_name => $demo_style ) {
 							?>
@@ -1088,7 +1088,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			$new_style = $_POST['new_style'];
 			$demo_styles = apply_filters( 'beautiful_default_styles',array() );
 			if ( isset( $demo_styles[ $new_style ] ) ) {
-				set_theme_mod( 'theme_style',$new_style );
+				set_theme_mod( 'beautiful_site_color',$new_style );
 			}
 
 			wp_redirect( esc_url_raw( $this->get_next_step_link() ) );
