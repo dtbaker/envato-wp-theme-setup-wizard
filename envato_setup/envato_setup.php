@@ -7,7 +7,7 @@
  * @author      dtbaker
  * @author      vburlak
  * @package     envato_wizard
- * @version     1.1.2
+ * @version     1.1.4
  *
  * Based off the WooThemes installer.
  *
@@ -30,7 +30,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 *
 		 * @var string
 		 */
-		protected $version = '1.1.2';
+		protected $version = '1.1.4';
 
 		/** @var string Current theme name, used as namespace in actions. */
 		protected $theme_name = '';
@@ -47,7 +47,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		/** @var array Steps for the setup wizard */
 		protected $steps  = array();
 
-        /**
+		/**
 		 * Relative plugin path
 		 *
 		 * @since 1.1.2
@@ -74,14 +74,14 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 */
 		protected $page_slug;
 
-        /**
+		/**
 		 * TGMPA instance storage
 		 *
 		 * @var object
 		 */
 		protected $tgmpa_instance;
 
-        /**
+		/**
 		 * TGMPA Menu slug
 		 *
 		 * @var string
@@ -113,6 +113,28 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 */
 		protected $page_url;
 
+
+		/**
+		 * Holds the current instance of the theme manager
+		 *
+		 * @since 1.1.3
+		 * @var Envato_Theme_Setup_Wizard
+		 */
+		private static $instance = null;
+
+		/**
+		 * @since 1.1.3
+		 *
+		 * @return Envato_Theme_Setup_Wizard
+		 */
+		public static function get_instance() {
+			if ( ! self::$instance ) {
+				self::$instance = new self;
+			}
+
+			return self::$instance;
+		}
+
 		/**
 		 * A dummy constructor to prevent this class from being loaded more than once.
 		 *
@@ -142,15 +164,15 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 
 			//If we have parent slug - set correct url
 			if( $this->parent_slug !== '' ){
-    			$this->page_url = 'admin.php?page='.$this->page_slug;
+				$this->page_url = 'admin.php?page='.$this->page_slug;
 			}else{
-    			$this->page_url = 'themes.php?page='.$this->page_slug;
+				$this->page_url = 'themes.php?page='.$this->page_slug;
 			}
 			$this->page_url = apply_filters( $this->theme_name . '_theme_setup_wizard_page_url', $this->page_url );
 
 			//set relative plugin path url
 			$this->plugin_path = trailingslashit( $this->cleanFilePath( dirname( __FILE__ ) ) );
-            $relative_url = str_replace( $this->cleanFilePath( get_template_directory() ), '', $this->plugin_path );
+			$relative_url = str_replace( $this->cleanFilePath( get_template_directory() ), '', $this->plugin_path );
 			$this->plugin_url = trailingslashit( get_template_directory_uri() . $relative_url );
 		}
 
@@ -168,9 +190,9 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				add_action( 'after_switch_theme', array( $this, 'switch_theme' ) );
 
 				if(class_exists( 'TGM_Plugin_Activation' ) && isset($GLOBALS['tgmpa'])) {
-        			add_action( 'init', array( $this, 'get_tgmpa_instanse' ), 30 );
-        			add_action( 'init', array( $this, 'set_tgmpa_url' ), 40 );
-    			}
+					add_action( 'init', array( $this, 'get_tgmpa_instanse' ), 30 );
+					add_action( 'init', array( $this, 'set_tgmpa_url' ), 40 );
+				}
 
 				add_action( 'admin_menu', array( $this, 'admin_menus' ) );
 				add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
@@ -213,7 +235,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 * @since 1.1.2
 		 */
 		public function get_tgmpa_instanse(){
-    		$this->tgmpa_instance = call_user_func( array( get_class( $GLOBALS['tgmpa'] ), 'get_instance' ) );
+			$this->tgmpa_instance = call_user_func( array( get_class( $GLOBALS['tgmpa'] ), 'get_instance' ) );
 		}
 
 		/**
@@ -224,12 +246,12 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 */
 		public function set_tgmpa_url(){
 
-            $this->tgmpa_menu_slug = ( property_exists($this->tgmpa_instance, 'menu') ) ? $this->tgmpa_instance->menu : $this->tgmpa_menu_slug;
-            $this->tgmpa_menu_slug = apply_filters($this->theme_name . '_theme_setup_wizard_tgmpa_menu_slug', $this->tgmpa_menu_slug);
+			$this->tgmpa_menu_slug = ( property_exists($this->tgmpa_instance, 'menu') ) ? $this->tgmpa_instance->menu : $this->tgmpa_menu_slug;
+			$this->tgmpa_menu_slug = apply_filters($this->theme_name . '_theme_setup_wizard_tgmpa_menu_slug', $this->tgmpa_menu_slug);
 
-            $tgmpa_parent_slug = ( property_exists($this->tgmpa_instance, 'parent_slug') && $this->tgmpa_instance->parent_slug !== 'themes.php' ) ? 'admin.php' : 'themes.php';
+			$tgmpa_parent_slug = ( property_exists($this->tgmpa_instance, 'parent_slug') && $this->tgmpa_instance->parent_slug !== 'themes.php' ) ? 'admin.php' : 'themes.php';
 
-            $this->tgmpa_url = apply_filters($this->theme_name . '_theme_setup_wizard_tgmpa_url', $tgmpa_parent_slug.'?page='.$this->tgmpa_menu_slug);
+			$this->tgmpa_url = apply_filters($this->theme_name . '_theme_setup_wizard_tgmpa_url', $tgmpa_parent_slug.'?page='.$this->tgmpa_menu_slug);
 
 		}
 
@@ -238,13 +260,13 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 */
 		public function admin_menus() {
 
-    		if( $this->is_submenu_page() ){
-        		//prevent Theme Check warning about "themes should use add_theme_page for adding admin pages"
-        		$add_subpage_function = 'add_submenu'.'_page';
-        		$add_subpage_function( $this->parent_slug, __( 'Setup Wizard','envato_setup' ), __( 'Setup Wizard','envato_setup' ), 'manage_options', $this->page_slug, array( $this, 'setup_wizard' ) );
-    		}else{
-        		add_theme_page( __( 'Setup Wizard','envato_setup' ), __( 'Setup Wizard','envato_setup' ), 'manage_options', $this->page_slug, array( $this, 'setup_wizard' ) );
-    		}
+			if( $this->is_submenu_page() ){
+				//prevent Theme Check warning about "themes should use add_theme_page for adding admin pages"
+				$add_subpage_function = 'add_submenu'.'_page';
+				$add_subpage_function( $this->parent_slug, __( 'Setup Wizard','envato_setup' ), __( 'Setup Wizard','envato_setup' ), 'manage_options', $this->page_slug, array( $this, 'setup_wizard' ) );
+			}else{
+				add_theme_page( __( 'Setup Wizard','envato_setup' ), __( 'Setup Wizard','envato_setup' ), 'manage_options', $this->page_slug, array( $this, 'setup_wizard' ) );
+			}
 
 		}
 
@@ -254,7 +276,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 *
 		 * @since 1.1.1
 		 * @access public
-		 * @return void
+		 * @return array
 		 */
 		public function init_wizard_steps() {
 
@@ -303,7 +325,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				'handler' => '',
 			);
 
-			return $this->steps;
+			return apply_filters(  $this->theme_name . '_theme_setup_wizard_steps', $this->steps );
 
 		}
 
@@ -322,8 +344,8 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			wp_register_script( 'envato-setup', $this->plugin_url . '/js/envato-setup.js', array( 'jquery', 'jquery-blockui' ), $this->version );
 			wp_localize_script( 'envato-setup', 'envato_setup_params', array(
 				'tgm_plugin_nonce'            => array(
-				'update' => wp_create_nonce( 'tgmpa-update' ),
-				'install' => wp_create_nonce( 'tgmpa-install' ),
+					'update' => wp_create_nonce( 'tgmpa-update' ),
+					'install' => wp_create_nonce( 'tgmpa-install' ),
 				),
 				'tgm_bulk_url' => admin_url( $this->tgmpa_url ),
 				'ajaxurl' => admin_url( 'admin-ajax.php' ),
@@ -367,23 +389,23 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		/**
 		 * Setup Wizard Header
 		 */
-		public function setup_wizard_header() {
-			?>
-    		<!DOCTYPE html>
-    		<html xmlns="http://www.w3.org/1999/xhtml" <?php language_attributes(); ?>>
-    		<head>
-    			<meta name="viewport" content="width=device-width" />
-    			<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    			<title><?php _e( 'Theme &rsaquo; Setup Wizard', 'envato_setup' ); ?></title>
-    			<?php wp_print_scripts( 'envato-setup' ); ?>
-    			<?php do_action( 'admin_print_styles' ); ?>
-    			<?php do_action( 'admin_print_scripts' ); ?>
-    			<?php do_action( 'admin_head' ); ?>
-    		</head>
-    		<body class="envato-setup wp-core-ui">
-    		<h1 id="wc-logo">
-    			<a href="http://themeforest.net/user/dtbaker/portfolio" target="_blank"><?php
-					$image_url = get_theme_mod( 'logo_header_image', get_template_directory_uri().'/images/'.get_theme_mod( 'beautiful_site_color','pink' ).'/logo.png' );
+	public function setup_wizard_header() {
+		?>
+		<!DOCTYPE html>
+		<html xmlns="http://www.w3.org/1999/xhtml" <?php language_attributes(); ?>>
+		<head>
+			<meta name="viewport" content="width=device-width" />
+			<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+			<title><?php _e( 'Theme &rsaquo; Setup Wizard', 'envato_setup' ); ?></title>
+			<?php wp_print_scripts( 'envato-setup' ); ?>
+			<?php do_action( 'admin_print_styles' ); ?>
+			<?php do_action( 'admin_print_scripts' ); ?>
+			<?php do_action( 'admin_head' ); ?>
+		</head>
+		<body class="envato-setup wp-core-ui">
+		<h1 id="wc-logo">
+			<a href="http://themeforest.net/user/dtbaker/portfolio" target="_blank"><?php
+				$image_url = get_theme_mod( 'logo_header_image', get_template_directory_uri().'/images/'.get_theme_mod( 'beautiful_site_color','pink' ).'/logo.png' );
 				if ( $image_url ) {
 					$image = '<img class="site-logo" src="%s" alt="%s" style="width:%s; height:auto" />';
 					printf(
@@ -393,28 +415,28 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 						'200px'
 					);
 				} else { ?>
-    					<img src="<?php echo $this->plugin_url; ?>/images/logo.png" alt="Envato install wizard" /><?php
+					<img src="<?php echo $this->plugin_url; ?>/images/logo.png" alt="Envato install wizard" /><?php
 				} ?></a>
-    		</h1>
-    		<?php
+		</h1>
+		<?php
 		}
 
 		/**
 		 * Setup Wizard Footer
 		 */
 		public function setup_wizard_footer() {
-			?>
-    			<?php if ( 'next_steps' === $this->step ) : ?>
-    			<a class="wc-return-to-dashboard" href="<?php echo esc_url( admin_url() ); ?>"><?php _e( 'Return to the WordPress Dashboard', 'envato_setup' ); ?></a>
-    			<?php endif; ?>
-    		</body>
-    		<?php
-				@do_action( 'admin_footer' ); // this was spitting out some errors in some admin templates. quick @ fix until I have time to find out what's causing errors.
-				do_action( 'admin_print_footer_scripts' );
-			?>
-    		</html>
-    	<?php
-		}
+		?>
+		<?php if ( 'next_steps' === $this->step ) : ?>
+			<a class="wc-return-to-dashboard" href="<?php echo esc_url( admin_url() ); ?>"><?php _e( 'Return to the WordPress Dashboard', 'envato_setup' ); ?></a>
+		<?php endif; ?>
+		</body>
+		<?php
+		@do_action( 'admin_footer' ); // this was spitting out some errors in some admin templates. quick @ fix until I have time to find out what's causing errors.
+		do_action( 'admin_print_footer_scripts' );
+		?>
+		</html>
+		<?php
+	}
 
 		/**
 		 * Output the steps
@@ -423,9 +445,9 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			$ouput_steps = $this->steps;
 			array_shift( $ouput_steps );
 			?>
-    		<ol class="envato-setup-steps">
-    			<?php foreach ( $ouput_steps as $step_key => $step ) : ?>
-    				<li class="<?php
+			<ol class="envato-setup-steps">
+				<?php foreach ( $ouput_steps as $step_key => $step ) : ?>
+					<li class="<?php
 					$show_link = false;
 					if ( $step_key === $this->step ) {
 						echo 'active';
@@ -434,17 +456,17 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 						$show_link = true;
 					}
 					?>"><?php
-if ( $show_link ) {
-	?>
-	<a href="<?php echo esc_url( $this->get_step_link( $step_key ) );?>"><?php echo esc_html( $step['name'] );?></a>
-    						<?php
-} else {
-	echo esc_html( $step['name'] );
-}
+						if ( $show_link ) {
+							?>
+							<a href="<?php echo esc_url( $this->get_step_link( $step_key ) );?>"><?php echo esc_html( $step['name'] );?></a>
+							<?php
+						} else {
+							echo esc_html( $step['name'] );
+						}
 						?></li>
-    			<?php endforeach; ?>
-    		</ol>
-    		<?php
+				<?php endforeach; ?>
+			</ol>
+			<?php
 		}
 
 		/**
@@ -486,33 +508,34 @@ if ( $show_link ) {
 				$all_options = wp_load_alloptions();
 				foreach ( $all_options as $name => $value ) {
 					if ( stristr( $name, '_widget_area_manager' ) ) { $my_options[ $name ] = $value; }
+					if ( stristr( $name, 'wam_' ) ) { $my_options[ $name ] = $value; }
 				}
 				$my_options['travel_settings'] = array( 'api_key' => 'AIzaSyBsnYWO4SSibatp0SjsU9D2aZ6urI-_cJ8' );
 				$my_options['tt-font-google-api-key'] = 'AIzaSyBsnYWO4SSibatp0SjsU9D2aZ6urI-_cJ8';
 				?>
-    			<h1>Current Settings:</h1>
-    			<p>Widget Positions:</p>
-    			<textarea style="width:100%; height:80px;"><?php echo json_encode( $widget_positions );?></textarea>
-    			<p>Widget Options:</p>
-    			<textarea style="width:100%; height:80px;"><?php echo json_encode( $widget_options );?></textarea>
-    			<p>Menu IDs:</p>
-    			<textarea style="width:100%; height:80px;"><?php echo json_encode( $menu_ids );?></textarea>
-    			<p>Custom Options:</p>
-    			<textarea style="width:100%; height:80px;"><?php echo json_encode( $my_options );?></textarea>
-    			<p>Copy these values into your PHP code when distributing/updating the theme.</p>
-    			<?php
+				<h1>Current Settings:</h1>
+				<p>Widget Positions:</p>
+				<textarea style="width:100%; height:80px;"><?php echo json_encode( $widget_positions );?></textarea>
+				<p>Widget Options:</p>
+				<textarea style="width:100%; height:80px;"><?php echo json_encode( $widget_options );?></textarea>
+				<p>Menu IDs:</p>
+				<textarea style="width:100%; height:80px;"><?php echo json_encode( $menu_ids );?></textarea>
+				<p>Custom Options:</p>
+				<textarea style="width:100%; height:80px;"><?php echo json_encode( $my_options );?></textarea>
+				<p>Copy these values into your PHP code when distributing/updating the theme.</p>
+				<?php
 			} else {
 				?>
-    			<h1><?php _e( 'Welcome to the setup wizard for Beautiful!', 'envato_setup' ); ?></h1>
-    			<p><?php _e( 'Thank you for choosing the Beautiful theme from ThemeForest. This quick setup wizard will help you configure your new website. This wizard will install the required WordPress plugins, default content, logo and tell you a little about Help &amp; Support options. <br/>It should only take 5 minutes.', 'envato_setup' ); ?></p>
-    			<p><?php _e( 'No time right now? If you don’t want to go through the wizard, you can skip and return to the WordPress dashboard. Come back anytime if you change your mind!', 'envato_setup' ); ?></p>
-    			<p class="envato-setup-actions step">
-    				<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>"
-    				   class="button-primary button button-large button-next"><?php _e( 'Let\'s Go!', 'envato_setup' ); ?></a>
-    				<a href="<?php echo esc_url( wp_get_referer() && ! strpos( wp_get_referer(),'update.php' ) ? wp_get_referer() : admin_url( '' ) ); ?>"
-    				   class="button button-large"><?php _e( 'Not right now', 'envato_setup' ); ?></a>
-    			</p>
-    			<?php
+				<h1><?php _e( 'Welcome to the setup wizard for Beautiful!' ); ?></h1>
+				<p><?php _e( 'Thank you for choosing the Beautiful theme from ThemeForest. This quick setup wizard will help you configure your new website. This wizard will install the required WordPress plugins, default content, logo and tell you a little about Help &amp; Support options. <br/>It should only take 5 minutes.' ); ?></p>
+				<p><?php _e( 'No time right now? If you don\'t want to go through the wizard, you can skip and return to the WordPress dashboard. Come back anytime if you change your mind!' ); ?></p>
+				<p class="envato-setup-actions step">
+					<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>"
+					   class="button-primary button button-large button-next"><?php _e( 'Let\'s Go!' ); ?></a>
+					<a href="<?php echo esc_url( wp_get_referer() && ! strpos( wp_get_referer(),'update.php' ) ? wp_get_referer() : admin_url( '' ) ); ?>"
+					   class="button button-large"><?php _e( 'Not right now' ); ?></a>
+				</p>
+				<?php
 			}
 		}
 
@@ -582,44 +605,44 @@ if ( $show_link ) {
 			/* If we arrive here, we have the filesystem */
 
 			?>
-    		<h1><?php _e( 'Default Plugins', 'envato_setup' ); ?></h1>
-    		<form method="post">
+			<h1><?php _e( 'Default Plugins', 'envato_setup' ); ?></h1>
+			<form method="post">
 
-    			<?php
+				<?php
 				$plugins = $this->_get_plugins();
 				if ( count( $plugins['all'] ) ) {
-				?>
-    				<p><?php _e( 'Your website needs a few essential plugins. The following plugins will be installed:', 'envato_setup' ); ?></p>
-    				<ul class="envato-wizard-plugins">
-    					<?php foreach ( $plugins['all'] as $slug => $plugin ) {  ?>
-    						<li data-slug="<?php echo esc_attr( $slug );?>"><?php echo esc_html( $plugin['name'] );?>
-    							<span>
+					?>
+					<p><?php _e( 'Your website needs a few essential plugins. The following plugins will be installed:', 'envato_setup' ); ?></p>
+					<ul class="envato-wizard-plugins">
+						<?php foreach ( $plugins['all'] as $slug => $plugin ) {  ?>
+							<li data-slug="<?php echo esc_attr( $slug );?>"><?php echo esc_html( $plugin['name'] );?>
+								<span>
     								<?php
-									$keys = array();
-									if ( isset( $plugins['install'][ $slug ] ) ) { $keys[] = 'Installation'; }
-									if ( isset( $plugins['update'][ $slug ] ) ) { $keys[] = 'Update'; }
-									if ( isset( $plugins['activate'][ $slug ] ) ) { $keys[] = 'Activation'; }
-									echo implode( ' and ',$keys ).' required';
-									?>
+								    $keys = array();
+								    if ( isset( $plugins['install'][ $slug ] ) ) { $keys[] = 'Installation'; }
+								    if ( isset( $plugins['update'][ $slug ] ) ) { $keys[] = 'Update'; }
+								    if ( isset( $plugins['activate'][ $slug ] ) ) { $keys[] = 'Activation'; }
+								    echo implode( ' and ',$keys ).' required';
+								    ?>
     							</span>
-    							<div class="spinner"></div>
-    						</li>
-    					<?php } ?>
-    				</ul>
-    				<?php
+								<div class="spinner"></div>
+							</li>
+						<?php } ?>
+					</ul>
+					<?php
 				} else {
 					echo '<p><strong>'._e( 'Good news! All plugins are already installed and up to date. Please continue.','envato_setup' ).'</strong></p>';
 				} ?>
 
-    			<p><?php _e( 'You can add and remove plugins later on from within WordPress.', 'envato_setup' ); ?></p>
+				<p><?php _e( 'You can add and remove plugins later on from within WordPress.', 'envato_setup' ); ?></p>
 
-    			<p class="envato-setup-actions step">
-    				<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button-primary button button-large button-next" data-callback="install_plugins"><?php _e( 'Continue', 'envato_setup' ); ?></a>
-    				<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next"><?php _e( 'Skip this step', 'envato_setup' ); ?></a>
-    				<?php wp_nonce_field( 'envato-setup' ); ?>
-    			</p>
-    		</form>
-    		<?php
+				<p class="envato-setup-actions step">
+					<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button-primary button button-large button-next" data-callback="install_plugins"><?php _e( 'Continue', 'envato_setup' ); ?></a>
+					<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next"><?php _e( 'Skip this step', 'envato_setup' ); ?></a>
+					<?php wp_nonce_field( 'envato-setup' ); ?>
+				</p>
+			</form>
+			<?php
 		}
 
 
@@ -742,41 +765,41 @@ if ( $show_link ) {
 		 */
 		public function envato_setup_default_content() {
 			?>
-    		<h1><?php _e( 'Default Content', 'envato_setup' ); ?></h1>
-    		<form method="post">
-    			<p><?php printf( __( 'It\'s time to insert some default content for your new WordPress website. Choose what you would like inserted below and click Continue.', 'envato_setup' ), '<a href="' . esc_url( admin_url( 'edit.php?post_type=page' ) ) . '" target="_blank">', '</a>' ); ?></p>
-    			<table class="envato-setup-pages" cellspacing="0">
-    				<thead>
-    				<tr>
-    					<td class="check"> </td>
-    					<th class="item"><?php _e( 'Item', 'envato_setup' ); ?></th>
-    					<th class="description"><?php _e( 'Description', 'envato_setup' ); ?></th>
-    					<th class="status"><?php _e( 'Status', 'envato_setup' ); ?></th>
-    				</tr>
-    				</thead>
-    				<tbody>
-    				<?php foreach ( $this->_content_default_get() as $slug => $default ) {  ?>
-    				<tr class="envato_default_content" data-content="<?php echo esc_attr( $slug );?>">
-    					<td>
-    						<input type="checkbox" name="default_content[pages]" class="envato_default_content" id="default_content_<?php echo esc_attr( $slug );?>" value="1" checked>
-    					</td>
-    					<td><label for="default_content_<?php echo esc_attr( $slug );?>"><?php echo $default['title']; ?></label></td>
-    					<td class="description"><?php echo $default['description']; ?></td>
-    					<td class="status"> <span><?php echo $default['pending'];?></span> <div class="spinner"></div></td>
-    				</tr>
-    				<?php } ?>
-    				</tbody>
-    			</table>
+			<h1><?php _e( 'Default Content', 'envato_setup' ); ?></h1>
+			<form method="post">
+				<p><?php printf( __( 'It\'s time to insert some default content for your new WordPress website. Choose what you would like inserted below and click Continue.', 'envato_setup' ), '<a href="' . esc_url( admin_url( 'edit.php?post_type=page' ) ) . '" target="_blank">', '</a>' ); ?></p>
+				<table class="envato-setup-pages" cellspacing="0">
+					<thead>
+					<tr>
+						<td class="check"> </td>
+						<th class="item"><?php _e( 'Item', 'envato_setup' ); ?></th>
+						<th class="description"><?php _e( 'Description', 'envato_setup' ); ?></th>
+						<th class="status"><?php _e( 'Status', 'envato_setup' ); ?></th>
+					</tr>
+					</thead>
+					<tbody>
+					<?php foreach ( $this->_content_default_get() as $slug => $default ) {  ?>
+						<tr class="envato_default_content" data-content="<?php echo esc_attr( $slug );?>">
+							<td>
+								<input type="checkbox" name="default_content[pages]" class="envato_default_content" id="default_content_<?php echo esc_attr( $slug );?>" value="1" checked>
+							</td>
+							<td><label for="default_content_<?php echo esc_attr( $slug );?>"><?php echo $default['title']; ?></label></td>
+							<td class="description"><?php echo $default['description']; ?></td>
+							<td class="status"> <span><?php echo $default['pending'];?></span> <div class="spinner"></div></td>
+						</tr>
+					<?php } ?>
+					</tbody>
+				</table>
 
-    			<p><?php _e( 'Once inserted, this content can be managed from the WordPress admin dashboard.', 'envato_setup' ); ?></p>
+				<p><?php _e( 'Once inserted, this content can be managed from the WordPress admin dashboard.', 'envato_setup' ); ?></p>
 
-    			<p class="envato-setup-actions step">
-    				<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button-primary button button-large button-next" data-callback="install_content"><?php _e( 'Continue', 'envato_setup' ); ?></a>
-    				<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next"><?php _e( 'Skip this step', 'envato_setup' ); ?></a>
-    				<?php wp_nonce_field( 'envato-setup' ); ?>
-    			</p>
-    		</form>
-    		<?php
+				<p class="envato-setup-actions step">
+					<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button-primary button button-large button-next" data-callback="install_content"><?php _e( 'Continue', 'envato_setup' ); ?></a>
+					<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next"><?php _e( 'Skip this step', 'envato_setup' ); ?></a>
+					<?php wp_nonce_field( 'envato-setup' ); ?>
+				</p>
+			</form>
+			<?php
 		}
 
 
@@ -880,17 +903,17 @@ if ( $show_link ) {
 		}
 		private function _content_install_menu() {
 			//if($this->_import_wordpress_xml_file(__DIR__ ."/content/menu.xml")){
-				$menu_ids = $this->_get_menu_ids();
-				$save = array();
-				if ( isset( $menu_ids['primary'] ) ) {
-					$save['primary'] = $menu_ids['primary'];
-				}
-				if ( $save ) {
-					set_theme_mod( 'nav_menu_locations', array_map( 'absint', $save ) );
-					return true;
-				}
-				//}
-				return false;
+			$menu_ids = $this->_get_menu_ids();
+			$save = array();
+			if ( isset( $menu_ids['primary'] ) ) {
+				$save['primary'] = $menu_ids['primary'];
+			}
+			if ( $save ) {
+				set_theme_mod( 'nav_menu_locations', array_map( 'absint', $save ) );
+				return true;
+			}
+			//}
+			return false;
 		}
 		private function _content_install_widgets() {
 			// todo: pump these out into the 'content/' folder along with the XML so it's a little nicer to play with
@@ -924,69 +947,69 @@ if ( $show_link ) {
 			return true;
 
 		}
-	    private function _content_install_settings() {
+		private function _content_install_settings() {
 
-		    $custom_options = $this->_get_json( 'options.json' );
+			$custom_options = $this->_get_json( 'options.json' );
 
-		    // we also want to update the widget area manager options.
-		    foreach ( $custom_options as $option => $value ) {
-			    update_option( $option, $value );
-		    }
-		    // set full width page
-		    $aboutpage = get_page_by_title( 'Full Width Page' );
-		    if ( $aboutpage ) {
-			    //"wam__position_126_main":"pos_hidden"
-			    update_option( 'wam__position_' . $aboutpage->ID . '_main', 'pos_hidden' );
-		    }
-		    // set full sidebar widgets page on about
-		    $aboutpage = get_page_by_title( 'About' );
-		    if ( $aboutpage ) {
-			    update_option( 'wam__area_' . $aboutpage->ID . '_main', 'widget_area-6' );
-		    }
-		    // set the blog page and the home page.
-		    $shoppage = get_page_by_title( 'Shop' );
-		    if ( $shoppage ) {
-			    update_option( 'woocommerce_shop_page_id',$shoppage->ID );
-		    }
-		    $homepage = get_page_by_title( 'Home' );
-		    if ( $homepage ) {
-			    update_option( 'page_on_front', $homepage->ID );
-			    update_option( 'show_on_front', 'page' );
-		    }
-		    $blogpage = get_page_by_title( 'Blog' );
-		    if ( $blogpage ) {
-			    update_option( 'page_for_posts', $blogpage->ID );
-			    update_option( 'show_on_front', 'page' );
-		    }
+			// we also want to update the widget area manager options.
+			foreach ( $custom_options as $option => $value ) {
+				update_option( $option, $value );
+			}
+			// set full width page
+			$aboutpage = get_page_by_title( 'Full Width Page' );
+			if ( $aboutpage ) {
+				//"wam__position_126_main":"pos_hidden"
+				update_option( 'wam__position_' . $aboutpage->ID . '_main', 'pos_hidden' );
+			}
+			// set full sidebar widgets page on about
+			$aboutpage = get_page_by_title( 'About' );
+			if ( $aboutpage ) {
+				update_option( 'wam__area_' . $aboutpage->ID . '_main', 'widget_area-6' );
+			}
+			// set the blog page and the home page.
+			$shoppage = get_page_by_title( 'Shop' );
+			if ( $shoppage ) {
+				update_option( 'woocommerce_shop_page_id',$shoppage->ID );
+			}
+			$homepage = get_page_by_title( 'Home' );
+			if ( $homepage ) {
+				update_option( 'page_on_front', $homepage->ID );
+				update_option( 'show_on_front', 'page' );
+			}
+			$blogpage = get_page_by_title( 'Blog' );
+			if ( $blogpage ) {
+				update_option( 'page_for_posts', $blogpage->ID );
+				update_option( 'show_on_front', 'page' );
+			}
 
-		    return true;
-	    }
-	    private function _get_json( $file ) {
-		    if ( is_file( __DIR__.'/content/'.basename( $file ) ) ) {
-			    WP_Filesystem();
-			    global $wp_filesystem;
-			    $file_name = __DIR__ . '/content/' . basename( $file );
-			    if ( file_exists( $file_name ) ) {
-				    return json_decode( $wp_filesystem->get_contents( $file_name ), true );
-			    }
-		    }
-		    return array();
-	    }
+			return true;
+		}
+		private function _get_json( $file ) {
+			if ( is_file( __DIR__.'/content/'.basename( $file ) ) ) {
+				WP_Filesystem();
+				global $wp_filesystem;
+				$file_name = __DIR__ . '/content/' . basename( $file );
+				if ( file_exists( $file_name ) ) {
+					return json_decode( $wp_filesystem->get_contents( $file_name ), true );
+				}
+			}
+			return array();
+		}
 		/**
 		 * Logo & Design
 		 */
 		public function envato_setup_logo_design() {
 
 			?>
-    		<h1><?php _e( 'Logo &amp; Design', 'envato_setup' ); ?></h1>
-    		<form method="post">
-    			<p><?php echo sprintf( __( 'Please add your logo below. For best results, the logo should be a transparent PNG ( 466 by 277 pixels). The logo can be changed at any time from the Appearance > Customize area in your dashboard. Try %sEnvato Studio%s if you need a new logo designed.' ,'envato_setup' ), '<a href="http://studiotracking.envato.com/aff_c?offer_id=4&aff_id=1564&source=DemoInstall" target="_blank">','</a>' ); ?></p>
+			<h1><?php _e( 'Logo &amp; Design', 'envato_setup' ); ?></h1>
+			<form method="post">
+				<p><?php echo sprintf( __( 'Please add your logo below. For best results, the logo should be a transparent PNG ( 466 by 277 pixels). The logo can be changed at any time from the Appearance > Customize area in your dashboard. Try %sEnvato Studio%s if you need a new logo designed.' ,'envato_setup' ), '<a href="http://studiotracking.envato.com/aff_c?offer_id=4&aff_id=1564&source=DemoInstall" target="_blank">','</a>' ); ?></p>
 
-    			<table>
-    				<tr>
-    					<td>
-    						<div id="current-logo">
-    							<?php $image_url = get_theme_mod( 'logo_header_image', get_template_directory_uri().'/images/'.get_theme_mod( 'beautiful_site_color','pink' ).'/logo.png' );
+				<table>
+					<tr>
+						<td>
+							<div id="current-logo">
+								<?php $image_url = get_theme_mod( 'logo_header_image', get_template_directory_uri().'/images/'.get_theme_mod( 'beautiful_site_color','pink' ).'/logo.png' );
 								if ( $image_url ) {
 									$image = '<img class="site-logo" src="%s" alt="%s" style="width:%s; height:auto" />';
 									printf(
@@ -996,47 +1019,47 @@ if ( $show_link ) {
 										'200px'
 									);
 								} ?>
-    						</div>
-    					</td>
-    					<td>
-    						<a href="#" class="button button-upload"><?php _e( 'Upload New Logo', 'envato_setup' ); ?></a>
-    					</td>
-    				</tr>
-    			</table>
+							</div>
+						</td>
+						<td>
+							<a href="#" class="button button-upload"><?php _e( 'Upload New Logo', 'envato_setup' ); ?></a>
+						</td>
+					</tr>
+				</table>
 
 
-    			<p><?php _e( 'Please choose the color scheme for this website. The color scheme (along with font colors &amp; styles) can be changed at any time from the Appearance > Customize area in your dashboard.' ,'envato_setup' ); ?></p>
+				<p><?php _e( 'Please choose the color scheme for this website. The color scheme (along with font colors &amp; styles) can be changed at any time from the Appearance > Customize area in your dashboard.' ,'envato_setup' ); ?></p>
 
-    			<div class="theme-presets">
-    				<ul>
-    					<?php
+				<div class="theme-presets">
+					<ul>
+						<?php
 						$current_demo = get_theme_mod( 'theme_style','pink' );
 						$demo_styles = apply_filters( 'beautiful_default_styles',array() );
 						foreach ( $demo_styles as $demo_name => $demo_style ) {
 							?>
-    						<li<?php echo $demo_name == $current_demo ? ' class="current" ' : '';?>>
-    							<a href="#" data-style="<?php echo esc_attr( $demo_name );?>"><img src="<?php echo esc_url( $demo_style['image'] );?>"></a>
-    						</li>
-    					<?php } ?>
-    				</ul>
-    			</div>
+							<li<?php echo $demo_name == $current_demo ? ' class="current" ' : '';?>>
+								<a href="#" data-style="<?php echo esc_attr( $demo_name );?>"><img src="<?php echo esc_url( $demo_style['image'] );?>"></a>
+							</li>
+						<?php } ?>
+					</ul>
+				</div>
 
-    			<p><em>Please Note: Advanced changes to website graphics/colors may require extensive PhotoShop and Web Development knowledge. We recommend hiring an expert from <a href="http://studiotracking.envato.com/aff_c?offer_id=4&aff_id=1564&source=DemoInstall" target="_blank">Envato Studio</a> to assist with any advanced website changes.</em></p>
-    			<div style="display: none;">
-    				<img src="http://studiotracking.envato.com/aff_i?offer_id=4&aff_id=1564&source=DemoInstall" width="1" height="1" />
-    			</div>
+				<p><em>Please Note: Advanced changes to website graphics/colors may require extensive PhotoShop and Web Development knowledge. We recommend hiring an expert from <a href="http://studiotracking.envato.com/aff_c?offer_id=4&aff_id=1564&source=DemoInstall" target="_blank">Envato Studio</a> to assist with any advanced website changes.</em></p>
+				<div style="display: none;">
+					<img src="http://studiotracking.envato.com/aff_i?offer_id=4&aff_id=1564&source=DemoInstall" width="1" height="1" />
+				</div>
 
 
-    			<input type="hidden" name="new_logo_id" id="new_logo_id" value="">
-    			<input type="hidden" name="new_style" id="new_style" value="">
+				<input type="hidden" name="new_logo_id" id="new_logo_id" value="">
+				<input type="hidden" name="new_style" id="new_style" value="">
 
-    			<p class="envato-setup-actions step">
-    				<input type="submit" class="button-primary button button-large button-next" value="<?php esc_attr_e( 'Continue', 'envato_setup' ); ?>" name="save_step" />
-    				<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next"><?php _e( 'Skip this step', 'envato_setup' ); ?></a>
-    				<?php wp_nonce_field( 'envato-setup' ); ?>
-    			</p>
-    		</form>
-    		<?php
+				<p class="envato-setup-actions step">
+					<input type="submit" class="button-primary button button-large button-next" value="<?php esc_attr_e( 'Continue', 'envato_setup' ); ?>" name="save_step" />
+					<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next"><?php _e( 'Skip this step', 'envato_setup' ); ?></a>
+					<?php wp_nonce_field( 'envato-setup' ); ?>
+				</p>
+			</form>
+			<?php
 		}
 
 		/**
@@ -1077,55 +1100,55 @@ if ( $show_link ) {
 		 */
 		public function envato_setup_updates() {
 			?>
-    		<h1><?php _e( 'Theme Updates', 'envato_setup' ); ?></h1>
-    		<?php if ( function_exists( 'envato_market' ) ) { ?>
-    		<form method="post">
-    			<?php
-				$option = envato_market()->get_options();
+			<h1><?php _e( 'Theme Updates', 'envato_setup' ); ?></h1>
+			<?php if ( function_exists( 'envato_market' ) ) { ?>
+				<form method="post">
+					<?php
+					$option = envato_market()->get_options();
 
-				//echo '<pre>';print_r($option);echo '</pre>';
-				$my_items = array();
-				if ( $option && ! empty( $option['items'] ) ) {
-					foreach ( $option['items'] as $item ) {
-						if ( ! empty( $item['oauth'] ) && ! empty( $item['token_data']['expires'] ) && $item['oauth'] == $this->envato_username && $item['token_data']['expires'] >= time() ) {
-							// token exists and is active
-							$my_items[] = $item;
+					//echo '<pre>';print_r($option);echo '</pre>';
+					$my_items = array();
+					if ( $option && ! empty( $option['items'] ) ) {
+						foreach ( $option['items'] as $item ) {
+							if ( ! empty( $item['oauth'] ) && ! empty( $item['token_data']['expires'] ) && $item['oauth'] == $this->envato_username && $item['token_data']['expires'] >= time() ) {
+								// token exists and is active
+								$my_items[] = $item;
+							}
 						}
 					}
-				}
-				if ( count( $my_items ) ) {
-					?>
-    				<p>Thanks! Theme updates have been enabled for the following items: </p>
-    				<ul>
-    					<?php foreach ( $my_items as $item ) {  ?>
-    					<li><?php echo esc_html( $item['name'] );?></li>
-    					<?php } ?>
-    				</ul>
-    				<p>When an update becomes available it will show in the Dashboard with an option to install.</p>
-    				<p>Change settings from the 'Envato Market' menu in the WordPress Dashboard.</p>
+					if ( count( $my_items ) ) {
+						?>
+						<p>Thanks! Theme updates have been enabled for the following items: </p>
+						<ul>
+							<?php foreach ( $my_items as $item ) {  ?>
+								<li><?php echo esc_html( $item['name'] );?></li>
+							<?php } ?>
+						</ul>
+						<p>When an update becomes available it will show in the Dashboard with an option to install.</p>
+						<p>Change settings from the 'Envato Market' menu in the WordPress Dashboard.</p>
 
-    				<p class="envato-setup-actions step">
-    					<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next button-primary"><?php _e( 'Continue', 'envato_setup' ); ?></a>
-    				</p>
-    				<?php
-				} else {
-				?>
-    				<p><?php _e( 'Please login using your ThemeForest account to enable Theme Updates. We update themes when a new feature is added or a bug is fixed. It is highly recommended to enable Theme Updates.', 'envato_setup' ); ?></p>
-    				<p>When an update becomes available it will show in the Dashboard with an option to install.</p>
-    				<p>
-    					<em>On the next page you will be asked to Login with your ThemeForest account and grant permissions to enable Automatic Updates. If you have any questions please <a href="http://dtbaker.net/envato/" target="_blank">contact us</a>.</em>
-    				</p>
-    				<p class="envato-setup-actions step">
-    					<input type="submit" class="button-primary button button-large button-next" value="<?php esc_attr_e( 'Login with Envato', 'envato_setup' ); ?>" name="save_step" />
-    					<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next"><?php _e( 'Skip this step', 'envato_setup' ); ?></a>
-    					<?php wp_nonce_field( 'envato-setup' ); ?>
-    				</p>
-    			<?php } ?>
-    		</form>
-    			<?php } else { ?>
-    		Please ensure the Envato Market plugin has been installed correctly. <a href="<?php echo esc_url( $this->get_step_link( 'default_plugins' ) );?>">Return to Required Plugins installer</a>.
-    		<?php } ?>
-    		<?php
+						<p class="envato-setup-actions step">
+							<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next button-primary"><?php _e( 'Continue', 'envato_setup' ); ?></a>
+						</p>
+						<?php
+					} else {
+						?>
+						<p><?php _e( 'Please login using your ThemeForest account to enable Theme Updates. We update themes when a new feature is added or a bug is fixed. It is highly recommended to enable Theme Updates.', 'envato_setup' ); ?></p>
+						<p>When an update becomes available it will show in the Dashboard with an option to install.</p>
+						<p>
+							<em>On the next page you will be asked to Login with your ThemeForest account and grant permissions to enable Automatic Updates. If you have any questions please <a href="http://dtbaker.net/envato/" target="_blank">contact us</a>.</em>
+						</p>
+						<p class="envato-setup-actions step">
+							<input type="submit" class="button-primary button button-large button-next" value="<?php esc_attr_e( 'Login with Envato', 'envato_setup' ); ?>" name="save_step" />
+							<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-large button-next"><?php _e( 'Skip this step', 'envato_setup' ); ?></a>
+							<?php wp_nonce_field( 'envato-setup' ); ?>
+						</p>
+					<?php } ?>
+				</form>
+			<?php } else { ?>
+				Please ensure the Envato Market plugin has been installed correctly. <a href="<?php echo esc_url( $this->get_step_link( 'default_plugins' ) );?>">Return to Required Plugins installer</a>.
+			<?php } ?>
+			<?php
 		}
 
 		/**
@@ -1145,51 +1168,51 @@ if ( $show_link ) {
 		public function envato_setup_customize() {
 			?>
 
-    		<h1>Theme Customization</h1>
-    		<p>
-    			Most changes to the website can be made through the Appearance > Customize menu from the WordPress dashboard. These include:
-    		</p>
-    		<ul>
-    			<li>Typography: Font Sizes, Style, Colors (over 200 fonts to choose from) for various page elements.</li>
-    			<li>Logo: Upload a new logo and adjust its size.</li>
-    			<li>Background: Upload a new background image.</li>
-    			<li>Layout: Enable/Disable responsive layout, page and sidebar width.</li>
-    		</ul>
-    		<p>To change the Sidebars go to Appearance > Widgets. Here widgets can be "drag &amp; droped" into sidebars. To control which "widget areas" appear, go to an individual page and look for the "Left/Right Column" menu. Here widgets can be chosen for display on the left or right of a page. More details in documentation.</p>
-    		<p>
-    			<em>Advanced Users: If you are going to make changes to the theme source code please use a <a href="https://codex.wordpress.org/Child_Themes" target="_blank">Child Theme</a> rather than modifying the main theme HTML/CSS/PHP code. This allows the parent theme to receive updates without overwriting your source code changes. <br/> See <code>child-theme.zip</code> in the main folder for a sample.</em>
-    		</p>
+			<h1>Theme Customization</h1>
+			<p>
+				Most changes to the website can be made through the Appearance > Customize menu from the WordPress dashboard. These include:
+			</p>
+			<ul>
+				<li>Typography: Font Sizes, Style, Colors (over 200 fonts to choose from) for various page elements.</li>
+				<li>Logo: Upload a new logo and adjust its size.</li>
+				<li>Background: Upload a new background image.</li>
+				<li>Layout: Enable/Disable responsive layout, page and sidebar width.</li>
+			</ul>
+			<p>To change the Sidebars go to Appearance > Widgets. Here widgets can be "drag &amp; droped" into sidebars. To control which "widget areas" appear, go to an individual page and look for the "Left/Right Column" menu. Here widgets can be chosen for display on the left or right of a page. More details in documentation.</p>
+			<p>
+				<em>Advanced Users: If you are going to make changes to the theme source code please use a <a href="https://codex.wordpress.org/Child_Themes" target="_blank">Child Theme</a> rather than modifying the main theme HTML/CSS/PHP code. This allows the parent theme to receive updates without overwriting your source code changes. <br/> See <code>child-theme.zip</code> in the main folder for a sample.</em>
+			</p>
 
-    		<p class="envato-setup-actions step">
-    			<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-primary button-large button-next"><?php _e( 'Continue', 'envato_setup' ); ?></a>
-    		</p>
+			<p class="envato-setup-actions step">
+				<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-primary button-large button-next"><?php _e( 'Continue', 'envato_setup' ); ?></a>
+			</p>
 
-    		<?php
+			<?php
 		}
 		public function envato_setup_help_support() {
 			?>
-    		<h1>Help and Support</h1>
-    		<p>This theme comes with 6 months item support from purchase date (with the option to extend this period). This license allows you to use this theme on a single website. Please purchase an additional license to use this theme on another website.</p>
-    		<p>Item Support can be accessed from <a href="http://dtbaker.net/envato/" target="_blank">http://dtbaker.net/envato/</a> and includes:</p>
-    		<ul>
-    			<li>Availability of the author to answer questions</li>
-    			<li>Answering technical questions about item features</li>
-    			<li>Assistance with reported bugs and issues</li>
-    			<li>Help with bundled 3rd party plugins</li>
-    		</ul>
+			<h1>Help and Support</h1>
+			<p>This theme comes with 6 months item support from purchase date (with the option to extend this period). This license allows you to use this theme on a single website. Please purchase an additional license to use this theme on another website.</p>
+			<p>Item Support can be accessed from <a href="http://dtbaker.net/envato/" target="_blank">http://dtbaker.net/envato/</a> and includes:</p>
+			<ul>
+				<li>Availability of the author to answer questions</li>
+				<li>Answering technical questions about item features</li>
+				<li>Assistance with reported bugs and issues</li>
+				<li>Help with bundled 3rd party plugins</li>
+			</ul>
 
-    		<p>Item Support <strong>DOES NOT</strong> Include:</p>
-    		<ul>
-    			<li>Customization services (this is available through <a href="http://studiotracking.envato.com/aff_c?offer_id=4&aff_id=1564&source=DemoInstall" target="_blank">Envato Studio</a>)</li>
-    			<li>Installation services (this is available through <a href="http://studiotracking.envato.com/aff_c?offer_id=4&aff_id=1564&source=DemoInstall" target="_blank">Envato Studio</a>)</li>
-    			<li>Help and Support for non-bundled 3rd party plugins (i.e. plugins you install yourself later on)</li>
-    		</ul>
-    		<p>More details about item support can be found in the ThemeForest <a href="http://themeforest.net/page/item_support_policy" target="_blank">Item Support Polity</a>. </p>
-    		<p class="envato-setup-actions step">
-    			<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-primary button-large button-next"><?php _e( 'Agree and Continue', 'envato_setup' ); ?></a>
-    			<?php wp_nonce_field( 'envato-setup' ); ?>
-    		</p>
-    		<?php
+			<p>Item Support <strong>DOES NOT</strong> Include:</p>
+			<ul>
+				<li>Customization services (this is available through <a href="http://studiotracking.envato.com/aff_c?offer_id=4&aff_id=1564&source=DemoInstall" target="_blank">Envato Studio</a>)</li>
+				<li>Installation services (this is available through <a href="http://studiotracking.envato.com/aff_c?offer_id=4&aff_id=1564&source=DemoInstall" target="_blank">Envato Studio</a>)</li>
+				<li>Help and Support for non-bundled 3rd party plugins (i.e. plugins you install yourself later on)</li>
+			</ul>
+			<p>More details about item support can be found in the ThemeForest <a href="http://themeforest.net/page/item_support_policy" target="_blank">Item Support Polity</a>. </p>
+			<p class="envato-setup-actions step">
+				<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button button-primary button-large button-next"><?php _e( 'Agree and Continue', 'envato_setup' ); ?></a>
+				<?php wp_nonce_field( 'envato-setup' ); ?>
+			</p>
+			<?php
 		}
 
 		/**
@@ -1197,42 +1220,51 @@ if ( $show_link ) {
 		 */
 		public function envato_setup_ready() {
 			?>
-    		<a href="https://twitter.com/share" class="twitter-share-button" data-url="http://themeforest.net/user/dtbaker/portfolio?ref=dtbaker" data-text="<?php echo esc_attr( 'I just installed the Beautiful #WordPress theme from #ThemeForest' ); ?>" data-via="EnvatoMarket" data-size="large">Tweet</a>
-    		<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+			<a href="https://twitter.com/share" class="twitter-share-button" data-url="http://themeforest.net/user/dtbaker/portfolio?ref=dtbaker" data-text="<?php echo esc_attr( 'I just installed the Beautiful #WordPress theme from #ThemeForest' ); ?>" data-via="EnvatoMarket" data-size="large">Tweet</a>
+			<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
 
-    		<h1><?php _e( 'Your Website is Ready!', 'envato_setup' ); ?></h1>
+			<h1><?php _e( 'Your Website is Ready!', 'envato_setup' ); ?></h1>
 
-    		<p>Congratulations! The theme has been activated and your website is ready. Login to your WordPress dashboard to make changes and modify any of the default content to suit your needs.</p>
-    		<p>Please come back and <a href="http://themeforest.net/downloads" target="_blank">leave a 5-star rating</a> if you are happy with this theme. <br/>Follow <a  href="https://twitter.com/dtbaker" target="_blank">@dtbaker</a> on Twitter to see updates. Thanks! </p>
+			<p>Congratulations! The theme has been activated and your website is ready. Login to your WordPress dashboard to make changes and modify any of the default content to suit your needs.</p>
+			<p>Please come back and <a href="http://themeforest.net/downloads" target="_blank">leave a 5-star rating</a> if you are happy with this theme. <br/>Follow <a  href="https://twitter.com/dtbaker" target="_blank">@dtbaker</a> on Twitter to see updates. Thanks! </p>
 
-    		<div class="envato-setup-next-steps">
-    			<div class="envato-setup-next-steps-first">
-    				<h2><?php _e( 'Next Steps', 'envato_setup' ); ?></h2>
-    				<ul>
-    					<li class="setup-product"><a class="button button-primary button-large" href="https://twitter.com/dtbaker" target="_blank"><?php _e( 'Follow @dtbaker on Twitter', 'envato_setup' ); ?></a></li>
-    					<li class="setup-product"><a class="button button-next button-large" href="<?php echo esc_url( home_url() ); ?>"><?php _e( 'View your new website!', 'envato_setup' ); ?></a></li>
-    				</ul>
-    			</div>
-    			<div class="envato-setup-next-steps-last">
-    				<h2><?php _e( 'More Resources', 'envato_setup' ); ?></h2>
-    				<ul>
-    					<li class="documentation"><a href="http://dtbaker.net/envato/documentation/" target="_blank"><?php _e( 'Read the Theme Documentation', 'envato_setup' ); ?></a></li>
-    					<li class="howto"><a href="https://wordpress.org/support/" target="_blank"><?php _e( 'Learn how to use WordPress', 'envato_setup' ); ?></a></li>
-    					<li class="rating"><a href="http://themeforest.net/downloads" target="_blank"><?php _e( 'Leave an Item Rating', 'envato_setup' ); ?></a></li>
-    					<li class="support"><a href="http://dtbaker.net/envato/" target="_blank"><?php _e( 'Get Help and Support', 'envato_setup' ); ?></a></li>
-    				</ul>
-    			</div>
-    		</div>
-    		<?php
+			<div class="envato-setup-next-steps">
+				<div class="envato-setup-next-steps-first">
+					<h2><?php _e( 'Next Steps', 'envato_setup' ); ?></h2>
+					<ul>
+						<li class="setup-product"><a class="button button-primary button-large" href="https://twitter.com/dtbaker" target="_blank"><?php _e( 'Follow @dtbaker on Twitter', 'envato_setup' ); ?></a></li>
+						<li class="setup-product"><a class="button button-next button-large" href="<?php echo esc_url( home_url() ); ?>"><?php _e( 'View your new website!', 'envato_setup' ); ?></a></li>
+					</ul>
+				</div>
+				<div class="envato-setup-next-steps-last">
+					<h2><?php _e( 'More Resources', 'envato_setup' ); ?></h2>
+					<ul>
+						<li class="documentation"><a href="http://dtbaker.net/envato/documentation/" target="_blank"><?php _e( 'Read the Theme Documentation', 'envato_setup' ); ?></a></li>
+						<li class="howto"><a href="https://wordpress.org/support/" target="_blank"><?php _e( 'Learn how to use WordPress', 'envato_setup' ); ?></a></li>
+						<li class="rating"><a href="http://themeforest.net/downloads" target="_blank"><?php _e( 'Leave an Item Rating', 'envato_setup' ); ?></a></li>
+						<li class="support"><a href="http://dtbaker.net/envato/" target="_blank"><?php _e( 'Get Help and Support', 'envato_setup' ); ?></a></li>
+					</ul>
+				</div>
+			</div>
+			<?php
 		}
 
 		public function envato_market_admin_init() {
+
+			if(!function_exists('envato_market'))return;
+
 			global $wp_settings_sections;
 			if ( ! isset( $wp_settings_sections[ envato_market()->get_slug() ] ) ) {
 				// means we're running the admin_init hook before envato market gets to setup settings area.
 				// good - this means our oauth prompt will appear first in the list of settings blocks
 				register_setting( envato_market()->get_slug(), envato_market()->get_option_name() );
 			}
+
+			// pull our custom options across to envato.
+			$option = get_option( 'envato_setup_wizard' , array() );
+			$envato_options = envato_market()->get_options();
+			$envato_options = $this->_array_merge_recursive_distinct($envato_options, $option);
+			update_option( envato_market()->get_option_name(), $envato_options );
 
 			//add_thickbox();
 
@@ -1248,21 +1280,21 @@ if ( $show_link ) {
 					update_option( 'envato_oauth_'.$this->envato_username, $oauth_nonce );
 				}
 				$response = wp_remote_post( $this->oauth_script, array(
-					'method' => 'POST',
-					'timeout' => 15,
-					'redirection' => 1,
-					'httpversion' => '1.0',
-					'blocking' => true,
-					'headers' => array(),
-					'body' => array(
-					'oauth_session' => $_POST['oauth_session'],
-					'oauth_nonce' => $oauth_nonce,
-					'get_token' => 'yes',
-					'url' => home_url(),
-					'theme' => $my_theme->get( 'Name' ),
-					'version' => $my_theme->get( 'Version' ),
-					),
-					'cookies' => array(),
+						'method' => 'POST',
+						'timeout' => 15,
+						'redirection' => 1,
+						'httpversion' => '1.0',
+						'blocking' => true,
+						'headers' => array(),
+						'body' => array(
+							'oauth_session' => $_POST['oauth_session'],
+							'oauth_nonce' => $oauth_nonce,
+							'get_token' => 'yes',
+							'url' => home_url(),
+							'theme' => $my_theme->get( 'Name' ),
+							'version' => $my_theme->get( 'Version' ),
+						),
+						'cookies' => array(),
 					)
 				);
 				if ( is_wp_error( $response ) ) {
@@ -1308,7 +1340,7 @@ if ( $show_link ) {
 				}
 				self::$_current_manage_token = $token['access_token'];
 				// yes! we have an access token. store this in our options so we can get a list of items using it.
-				$option = envato_market()->get_options();
+				$option = get_option( 'envato_setup_wizard', array() );
 				if ( ! is_array( $option ) ) {
 					$option = array();
 				}
@@ -1324,21 +1356,21 @@ if ( $show_link ) {
 					$my_theme = wp_get_theme();
 					$oauth_nonce = get_option( 'envato_oauth_'.$this->envato_username );
 					$response = wp_remote_post( $this->oauth_script, array(
-						'method' => 'POST',
-						'timeout' => 10,
-						'redirection' => 1,
-						'httpversion' => '1.0',
-						'blocking' => true,
-						'headers' => array(),
-						'body' => array(
-						'oauth_session' => $token['oauth_session'],
-						'oauth_nonce' => $oauth_nonce,
-						'refresh_token' => 'yes',
-						'url' => home_url(),
-						'theme' => $my_theme->get( 'Name' ),
-						'version' => $my_theme->get( 'Version' ),
-						),
-						'cookies' => array(),
+							'method' => 'POST',
+							'timeout' => 10,
+							'redirection' => 1,
+							'httpversion' => '1.0',
+							'blocking' => true,
+							'headers' => array(),
+							'body' => array(
+								'oauth_session' => $token['oauth_session'],
+								'oauth_nonce' => $oauth_nonce,
+								'refresh_token' => 'yes',
+								'url' => home_url(),
+								'theme' => $my_theme->get( 'Name' ),
+								'version' => $my_theme->get( 'Version' ),
+							),
+							'cookies' => array(),
 						)
 					);
 					if ( is_wp_error( $response ) ) {
@@ -1349,7 +1381,7 @@ if ( $show_link ) {
 						$result = false;
 						if ( is_array( $new_token ) && ! empty( $new_token['new_token'] ) ) {
 							$token['access_token'] = $new_token['new_token'];
-						    $token['expires'] = time() + 3600;
+							$token['expires'] = time() + 3600;
 						}
 					}
 				}
@@ -1357,7 +1389,7 @@ if ( $show_link ) {
 				// add this to our items array.
 				$response = envato_market()->api()->request( 'https://api.envato.com/v3/market/buyer/purchases', array(
 					'headers' => array(
-					'Authorization' => 'Bearer ' . $token['access_token'],
+						'Authorization' => 'Bearer ' . $token['access_token'],
 					),
 				) );
 				self::$_current_manage_token = false;
@@ -1380,7 +1412,7 @@ if ( $show_link ) {
 						}
 						if ( ! $exists ) {
 							$option['items'][] = array(
-								'id' => $purchase['item']['id'],
+								'id' => '' . $purchase['item']['id'], // item id needs to be a string for market download to work correctly.
 								'name' => $purchase['item']['name'],
 								'token' => $token['access_token'],
 								'token_data' => $token,
@@ -1398,13 +1430,38 @@ if ( $show_link ) {
 				}
 				// store our 1 hour long token here. we can refresh this token when it comes time to use it again (i.e. during an update)
 				$option['oauth'][ $this->envato_username ] = $token;
-				update_option( envato_market()->get_option_name(), $option );
+				update_option( 'envato_setup_wizard', $option );
+
+				$envato_options = envato_market()->get_options();
+				$envato_options = $this->_array_merge_recursive_distinct($envato_options, $option);
+				update_option( envato_market()->get_option_name(), $envato_options );
 				envato_market()->items()->set_themes( true );
 				envato_market()->items()->set_plugins( true );
 				return true;
 			} else {
 				return false;
 			}
+		}
+
+		/**
+		 * @param $array1
+		 * @param $array2
+		 *
+		 * @return mixed
+		 *
+		 *
+		 * @since    1.1.4
+		 */
+		private function _array_merge_recursive_distinct( $array1, $array2 ) {
+			$merged = $array1;
+			foreach ( $array2 as $key => &$value ) {
+				if ( is_array( $value ) && isset ( $merged [ $key ] ) && is_array( $merged [ $key ] ) ) {
+					$merged [ $key ] = $this->_array_merge_recursive_distinct( $merged [ $key ], $value );
+				} else {
+					$merged [ $key ] = $value;
+				}
+			}
+			return $merged;
 		}
 
 		/**
@@ -1449,11 +1506,11 @@ if ( $show_link ) {
 		public function render_oauth_login_fields_callback() {
 			$option = envato_market()->get_options();
 			?>
-    		<div class="oauth-login" data-username="<?php echo esc_attr( $this->envato_username ); ?>">
-    			<a href="<?php echo esc_url( $this->get_oauth_login_url( admin_url( 'admin.php?page=' . envato_market()->get_slug() . '#settings' ) ) ); ?>"
-			       class="oauth-login-button button button-primary">Login with Envato to activate updates</a>
-    		</div>
-    		<?php
+			<div class="oauth-login" data-username="<?php echo esc_attr( $this->envato_username ); ?>">
+				<a href="<?php echo esc_url( $this->get_oauth_login_url( admin_url( 'admin.php?page=' . envato_market()->get_slug() . '#settings' ) ) ); ?>"
+				   class="oauth-login-button button button-primary">Login with Envato to activate updates</a>
+			</div>
+			<?php
 		}
 
 		/// a better filter would be on the post-option get filter for the items array.
@@ -1463,25 +1520,25 @@ if ( $show_link ) {
 			return $this->oauth_script . '?bounce_nonce=' . wp_create_nonce( 'envato_oauth_bounce_' . $this->envato_username ) . '&wp_return=' . urlencode( $return );
 		}
 
-        /**
-         * Helper function
-         * Take a path and return it clean
-         *
-         * @param string $path
-         *
-         * @since    1.1.2
-         */
-        public static function cleanFilePath( $path ) {
-            $path = str_replace( '', '', str_replace( array( "\\", "\\\\" ), '/', $path ) );
-            if ( $path[ strlen( $path ) - 1 ] === '/' ) {
-                $path = rtrim( $path, '/' );
-            }
-            return $path;
-        }
+		/**
+		 * Helper function
+		 * Take a path and return it clean
+		 *
+		 * @param string $path
+		 *
+		 * @since    1.1.2
+		 */
+		public static function cleanFilePath( $path ) {
+			$path = str_replace( '', '', str_replace( array( "\\", "\\\\" ), '/', $path ) );
+			if ( $path[ strlen( $path ) - 1 ] === '/' ) {
+				$path = rtrim( $path, '/' );
+			}
+			return $path;
+		}
 
-        public function is_submenu_page(){
-            return ( $this->parent_slug == '' ) ? false : true;
-        }
+		public function is_submenu_page(){
+			return ( $this->parent_slug == '' ) ? false : true;
+		}
 	}
 
 }// if !class_exists
@@ -1496,6 +1553,6 @@ if ( $show_link ) {
 add_action( 'after_setup_theme', 'envato_theme_setup_wizard', 10 );
 if ( ! function_exists( 'envato_theme_setup_wizard' ) ) :
 	function envato_theme_setup_wizard() {
-		new Envato_Theme_Setup_Wizard;
+		Envato_Theme_Setup_Wizard::get_instance();
 	}
 endif;
