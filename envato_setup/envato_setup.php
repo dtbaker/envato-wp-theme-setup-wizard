@@ -398,6 +398,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 			<title><?php _e( 'Theme &rsaquo; Setup Wizard', 'envato_setup' ); ?></title>
 			<?php wp_print_scripts( 'envato-setup' ); ?>
+			<?php do_action( 'admin_enqueue_scripts' ); ?>
 			<?php do_action( 'admin_print_styles' ); ?>
 			<?php do_action( 'admin_print_scripts' ); ?>
 			<?php do_action( 'admin_head' ); ?>
