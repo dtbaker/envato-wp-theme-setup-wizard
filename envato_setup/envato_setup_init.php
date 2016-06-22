@@ -1,6 +1,14 @@
 <?php
 
-// this is an example of an 'init' file you can use to override the default Envato_Theme_Setup_Wizard class.
+if ( ! defined( 'ABSPATH' ) ) exit;
+
+
+add_filter('envato_setup_logo_image','dtbwp_envato_setup_logo_image');
+function dtbwp_envato_setup_logo_image($old_image_url){
+	return get_template_directory_uri().'/images/light/logo.png';
+}
+
+
 
 if ( ! function_exists( 'envato_theme_setup_wizard' ) ) :
 	function envato_theme_setup_wizard() {
@@ -27,6 +35,10 @@ if ( ! function_exists( 'envato_theme_setup_wizard' ) ) :
 					}
 
 					return self::$instance;
+				}
+
+				public function get_default_theme_style(){
+					return 'dark';
 				}
 
 			}

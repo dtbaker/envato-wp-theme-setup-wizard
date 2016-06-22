@@ -7,7 +7,7 @@
  * @author      dtbaker
  * @author      vburlak
  * @package     envato_wizard
- * @version     1.1.4
+ * @version     1.1.7
  *
  * Based off the WooThemes installer.
  *
@@ -30,7 +30,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 *
 		 * @var string
 		 */
-		protected $version = '1.1.4';
+		protected $version = '1.1.9';
 
 		/** @var string Current theme name, used as namespace in actions. */
 		protected $theme_name = '';
@@ -149,10 +149,34 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		}
 
 		/**
+		 * Get the default style. Can be overriden by theme init scripts.
+		 *
+		 * @see Envato_Theme_Setup_Wizard::instance()
+		 *
+		 * @since 1.1.7
+		 * @access public
+		 */
+		public function get_default_theme_style(){
+			return 'pink';
+		}
+
+		/**
+		 * Get the default style. Can be overriden by theme init scripts.
+		 *
+		 * @see Envato_Theme_Setup_Wizard::instance()
+		 *
+		 * @since 1.1.9
+		 * @access public
+		 */
+		public function get_header_logo_width(){
+			return '200px';
+		}
+
+		/**
 		 * Setup the class globals.
 		 *
 		 * @since 1.1.1
-		 * @access private
+		 * @access public
 		 */
 		public function init_globals() {
 			$current_theme = wp_get_theme();
@@ -183,7 +207,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 * @uses add_filter() To add filters.
 		 *
 		 * @since 1.1.1
-		 * @access private
+		 * @access public
 		 */
 		public function init_actions() {
 			if ( apply_filters( $this->theme_name . '_enable_setup_wizard', true ) && current_user_can( 'manage_options' )  ) {
@@ -207,8 +231,35 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				add_action( 'admin_init', array( $this, 'envato_market_admin_init' ), 20 );
 				add_filter( 'http_request_args', array( $this, 'envato_market_http_request_args' ), 10, 2 );
 			}
+			add_action('upgrader_post_install', array($this,'upgrader_post_install'), 10, 2);
 		}
 
+		/**
+		 * After a theme update we clear the setup_complete option. This prompts the user to visit the update page again.
+		 *
+		 * @since 1.1.8
+		 * @access public
+		 */
+		public function upgrader_post_install($return, $theme) {
+			if ( is_wp_error( $return ) ) {
+				return $return;
+			}
+			if ( $theme != get_stylesheet() ) {
+				return $return;
+			}
+			update_option( 'envato_setup_complete', false );
+
+			return $return;
+		}
+		/**
+		 * We determine if the user already has theme content installed. This can happen if swapping from a previous theme or updated the current theme. We change the UI a bit when updating / swapping to a new theme.
+		 *
+		 * @since 1.1.8
+		 * @access public
+		 */
+		public function is_possible_upgrade(){
+			return false;
+		}
 		public function enqueue_scripts() {
 		}
 		public function tgmpa_load( $status ) {
@@ -220,7 +271,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		}
 		public function admin_redirects() {
 			ob_start();
-			if ( ! get_transient( '_'.$this->theme_name.'_activation_redirect' ) ) {
+			if ( ! get_transient( '_'.$this->theme_name.'_activation_redirect' ) || get_option( 'envato_setup_complete', false ) ) {
 				return;
 			}
 			delete_transient( '_'.$this->theme_name.'_activation_redirect' );
@@ -284,7 +335,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				'introduction' => array(
 					'name'    => __( 'Introduction', 'envato_setup' ),
 					'view'    => array( $this, 'envato_setup_introduction' ),
-					'handler' => '',
+					'handler' => array( $this, 'envato_setup_introduction_save' ),
 				),
 			);
 			if ( class_exists( 'TGM_Plugin_Activation' ) && isset( $GLOBALS['tgmpa'] ) ) {
@@ -294,6 +345,11 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 					'handler' => '',
 				);
 			}
+			$this->steps['updates'] = array(
+				'name'    => __( 'Updates', 'envato_setup' ),
+				'view'    => array( $this, 'envato_setup_updates' ),
+				'handler' => array( $this, 'envato_setup_updates_save' ),
+			);
 			$this->steps['default_content'] = array(
 				'name'    => __( 'Content', 'envato_setup' ),
 				'view'    => array( $this, 'envato_setup_default_content' ),
@@ -303,11 +359,6 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				'name'    => __( 'Logo & Design', 'envato_setup' ),
 				'view'    => array( $this, 'envato_setup_logo_design' ),
 				'handler' => array( $this, 'envato_setup_logo_design_save' ),
-			);
-			$this->steps['updates'] = array(
-				'name'    => __( 'Updates', 'envato_setup' ),
-				'view'    => array( $this, 'envato_setup_updates' ),
-				'handler' => array( $this, 'envato_setup_updates_save' ),
 			);
 			$this->steps['customize'] = array(
 				'name'    => __( 'Customize', 'envato_setup' ),
@@ -325,7 +376,8 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				'handler' => '',
 			);
 
-			return apply_filters(  $this->theme_name . '_theme_setup_wizard_steps', $this->steps );
+
+			$this->steps = apply_filters(  $this->theme_name . '_theme_setup_wizard_steps', $this->steps );
 
 		}
 
@@ -340,8 +392,8 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 
 			$this->step = isset( $_GET['step'] ) ? sanitize_key( $_GET['step'] ) : current( array_keys( $this->steps ) );
 
-			wp_register_script( 'jquery-blockui', $this->plugin_url . '/js/jquery.blockUI.js', array( 'jquery' ), '2.70', true );
-			wp_register_script( 'envato-setup', $this->plugin_url . '/js/envato-setup.js', array( 'jquery', 'jquery-blockui' ), $this->version );
+			wp_register_script( 'jquery-blockui', $this->plugin_url . 'js/jquery.blockUI.js', array( 'jquery' ), '2.70', true );
+			wp_register_script( 'envato-setup', $this->plugin_url . 'js/envato-setup.js', array( 'jquery', 'jquery-blockui' ), $this->version );
 			wp_localize_script( 'envato-setup', 'envato_setup_params', array(
 				'tgm_plugin_nonce'            => array(
 					'update' => wp_create_nonce( 'tgmpa-update' ),
@@ -354,7 +406,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			) );
 
 			//wp_enqueue_style( 'envato_wizard_admin_styles', $this->plugin_url . '/css/admin.css', array(), $this->version );
-			wp_enqueue_style( 'envato-setup', $this->plugin_url . '/css/envato-setup.css', array( 'dashicons', 'install' ), $this->version );
+			wp_enqueue_style( 'envato-setup', $this->plugin_url . 'css/envato-setup.css', array( 'wp-admin', 'dashicons', 'install' ), $this->version );
 
 			//enqueue style for admin notices
 			wp_enqueue_style( 'wp-admin' );
@@ -405,17 +457,18 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		<body class="envato-setup wp-core-ui">
 		<h1 id="wc-logo">
 			<a href="http://themeforest.net/user/dtbaker/portfolio" target="_blank"><?php
-				$image_url = get_theme_mod( 'logo_header_image', get_template_directory_uri().'/images/'.get_theme_mod( 'beautiful_site_color','pink' ).'/logo.png' );
+				$image_url = get_theme_mod( 'logo_header_image', get_template_directory_uri().'/images/'.get_theme_mod( 'dtbwp_site_color',$this->get_default_theme_style() ).'/logo.png' );
+				$image_url = apply_filters('envato_setup_logo_image',$image_url);
 				if ( $image_url ) {
 					$image = '<img class="site-logo" src="%s" alt="%s" style="width:%s; height:auto" />';
 					printf(
 						$image,
 						$image_url,
 						get_bloginfo( 'name' ),
-						'200px'
+						$this->get_header_logo_width()
 					);
 				} else { ?>
-					<img src="<?php echo $this->plugin_url; ?>/images/logo.png" alt="Envato install wizard" /><?php
+					<img src="<?php echo $this->plugin_url; ?>images/logo.png" alt="Envato install wizard" /><?php
 				} ?></a>
 		</h1>
 		<?php
@@ -482,6 +535,99 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		public function envato_setup_introduction() {
 			if ( isset( $_REQUEST['export'] ) ) {
 
+				$default_content = array();
+				$post_types = array('attachment','wpcf7_contact_form','post','page');
+				foreach(get_post_types() as $post_type){
+					if(!in_array($post_type,$post_types)){
+						$post_types[] = $post_type;
+					}
+				}
+				$categories = get_categories(array('type'=>''));
+				$taxonomies = get_taxonomies();
+//				print_r($categories);
+				foreach($post_types as $post_type){
+					if(in_array($post_type,array('revisions','event','event-recurring')))continue; // post types to ignore.
+					$args = array('post_type'=>$post_type,'posts_per_page'=>-1);
+					if($post_type == 'attachment'){
+
+					}
+					$post_datas = get_posts($args);
+					if(!isset($default_content[$post_type])){
+						$default_content[$post_type] = array();
+					}
+					$object = get_post_type_object( $post_type );
+					if($object && !empty($object->labels->singular_name)){
+						$type_title = $object->labels->name;
+					}else{
+						$type_title = ucwords($post_type).'s';
+					}
+
+					foreach($post_datas as $post_data) {
+						$meta = get_post_meta($post_data->ID, '', true);
+						foreach($meta as $meta_key => $meta_val){
+							if(
+								in_array($meta_key,array('_location_id')) || // which keys to nuke all the time
+								(
+									strpos($post_type,'dtbaker') === false &&
+									!in_array($post_type,array('nav_menu_item','location','event','product','wpcf7_contact_form')) && // post types we want to keep all meta values for
+									!in_array($meta_key,array('dtbwp_post_title_details','dtbwp_page_style','_wp_attached_file','_thumbnail_id')) // meta keys we want to keep for other post types
+								)
+							) { // which keys to keep
+								unset($meta[$meta_key]);
+							}
+						}
+						// copy stock images into the images/stock/ folder for theme import.
+						if($post_type == 'attachment'){
+							$file = get_attached_file($post_data->ID);
+							if(is_file($file)){
+								$post_data->guid = wp_get_attachment_url($post_data->ID);
+								if(is_dir(get_home_path().'/../theme/images/stock/')) {
+									copy( $file, get_home_path() . '/../theme/images/stock/' . basename( $file ) );
+								}
+							}
+							// fix for incorrect GUID when renaming files with the rename plugin, causes import to bust.
+
+						}
+						$terms = array();
+						foreach($taxonomies as $taxonomy){
+							$terms[$taxonomy] = wp_get_post_terms( $post_data->ID, $taxonomy, array('fields'=>'all'));
+							/*if($terms[$taxonomy]){
+								foreach($terms[$taxonomy] as $tax_id => $tax){
+									if(!empty($tax->term_id)) {
+										$terms[ $taxonomy ][ $tax_id ] -> meta = get_term_meta( $tax->term_id );
+									}
+								}
+							}*/
+						}
+						$default_content[ $post_type ][] = array(
+							'type_title' => $type_title,
+							'post_id' => $post_data->ID,
+							'post_title' => $post_data->post_title,
+							'post_status' => $post_data->post_status,
+							'post_name' => $post_data->post_name,
+							'post_content' => $post_data->post_content,
+							'post_excerpt' => $post_data->post_excerpt,
+							'post_parent' => $post_data->post_parent,
+							'menu_order' => $post_data->menu_order,
+							'post_date' => $post_data->post_date,
+							'post_date_gmt' => $post_data->post_date_gmt,
+							'guid' => $post_data->guid,
+							'post_mime_type' => $post_data->post_mime_type,
+							'meta' => $meta,
+							'terms' => $terms,
+//							'other' => $post_data,
+						);
+					}
+
+				}
+				// put certain content at very end.
+				$nav = isset($default_content['nav_menu_item']) ? $default_content['nav_menu_item'] : array();
+				if($nav){
+					unset($default_content['nav_menu_item']);
+					$default_content['nav_menu_item'] = $nav;
+				}
+//				print_r($default_content);
+//				exit;
 				// find the ID of our menu names so we can import them into default menu locations and also the widget positions below.
 				$menus = get_terms( 'nav_menu' );
 				$menu_ids = array();
@@ -509,25 +655,65 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				foreach ( $all_options as $name => $value ) {
 					if ( stristr( $name, '_widget_area_manager' ) ) { $my_options[ $name ] = $value; }
 					if ( stristr( $name, 'wam_' ) ) { $my_options[ $name ] = $value; }
+					//if ( stristr( $name, 'dbem_' ) !== false ) { $my_options[ $name ] = $value; }
+					if ( stristr( $name, 'dtbaker_featured_images' ) !== false ) { $my_options[ $name ] = $value; }
 				}
+				$my_options['dbem_credits'] = 0;
 				$my_options['travel_settings'] = array( 'api_key' => 'AIzaSyBsnYWO4SSibatp0SjsU9D2aZ6urI-_cJ8' );
 				$my_options['tt-font-google-api-key'] = 'AIzaSyBsnYWO4SSibatp0SjsU9D2aZ6urI-_cJ8';
 				?>
 				<h1>Current Settings:</h1>
-				<p>Widget Positions:</p>
+				<!--<p>categories.json:</p>
+				<textarea style="width:100%; height:80px;"><?php /*echo json_encode( $categories );*/?></textarea>-->
+				<p>default.json:</p>
+				<textarea style="width:100%; height:80px;"><?php echo json_encode( $default_content );?></textarea>
+				<p>widget_positions.json</p>
 				<textarea style="width:100%; height:80px;"><?php echo json_encode( $widget_positions );?></textarea>
-				<p>Widget Options:</p>
+				<p>widget_options.json:</p>
 				<textarea style="width:100%; height:80px;"><?php echo json_encode( $widget_options );?></textarea>
-				<p>Menu IDs:</p>
+				<p>menu.json:</p>
 				<textarea style="width:100%; height:80px;"><?php echo json_encode( $menu_ids );?></textarea>
-				<p>Custom Options:</p>
+				<p>options.json:</p>
 				<textarea style="width:100%; height:80px;"><?php echo json_encode( $my_options );?></textarea>
 				<p>Copy these values into your PHP code when distributing/updating the theme.</p>
 				<?php
+			} else if( $this->is_possible_upgrade() ){
+				?>
+				<h1><?php printf( __( 'Welcome to the setup wizard for %s.' ), wp_get_theme()); ?></h1>
+				<p><?php _e('It looks like you may have recently upgraded to this theme. Great! This setup wizard will help ensure all the default settings are correct. It will also show some information about your new website and support options.');?></p>
+				<p class="envato-setup-actions step">
+					<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>"
+					   class="button-primary button button-large button-next"><?php _e( 'Let\'s Go!' ); ?></a>
+					<a href="<?php echo esc_url( wp_get_referer() && ! strpos( wp_get_referer(),'update.php' ) ? wp_get_referer() : admin_url( '' ) ); ?>"
+					   class="button button-large"><?php _e( 'Not right now' ); ?></a>
+				</p>
+				<?php
+			} else if( get_option('envato_setup_complete', false) ){
+				?>
+				<h1><?php printf( __( 'Welcome to the setup wizard for %s.' ), wp_get_theme()); ?></h1>
+				<p><?php _e('It looks like you have already run the setup wizard. Below are some options: ');?></p>
+				<ul>
+					<li>
+						<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>"
+						   class="button-primary button button-next button-large"><?php _e( 'Run Setup Wizard Again' ); ?></a>
+					</li>
+					<li>
+						<form method="post">
+							<input type="hidden" name="reset-font-defaults" value="yes">
+							<input type="submit" class="button-primary button button-large button-next" value="<?php esc_attr_e( 'Reset font style and colors' ); ?>" name="save_step" />
+							<?php wp_nonce_field( 'envato-setup' ); ?>
+						</form>
+					</li>
+				</ul>
+				<p class="envato-setup-actions step">
+					<a href="<?php echo esc_url( wp_get_referer() && ! strpos( wp_get_referer(),'update.php' ) ? wp_get_referer() : admin_url( '' ) ); ?>"
+					   class="button button-large"><?php _e( 'Cancel' ); ?></a>
+				</p>
+				<?php
 			} else {
 				?>
-				<h1><?php _e( 'Welcome to the setup wizard for Beautiful!' ); ?></h1>
-				<p><?php _e( 'Thank you for choosing the Beautiful theme from ThemeForest. This quick setup wizard will help you configure your new website. This wizard will install the required WordPress plugins, default content, logo and tell you a little about Help &amp; Support options. <br/>It should only take 5 minutes.' ); ?></p>
+				<h1><?php printf( __( 'Welcome to the setup wizard for %s.' ), wp_get_theme()); ?></h1>
+				<p><?php printf( __( 'Thank you for choosing the %s theme from ThemeForest. This quick setup wizard will help you configure your new website. This wizard will install the required WordPress plugins, default content, logo and tell you a little about Help &amp; Support options. <br/>It should only take 5 minutes.' ), wp_get_theme()); ?></p>
 				<p><?php _e( 'No time right now? If you don\'t want to go through the wizard, you can skip and return to the WordPress dashboard. Come back anytime if you change your mind!' ); ?></p>
 				<p class="envato-setup-actions step">
 					<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>"
@@ -537,6 +723,45 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				</p>
 				<?php
 			}
+		}
+
+		/**
+		 *
+		 * Handles save button from welcome page. This is to perform tasks when the setup wizard has already been run. E.g. reset defaults
+		 *
+		 * @since 1.2.5
+		 */
+		public function envato_setup_introduction_save(){
+
+			check_admin_referer( 'envato-setup' );
+
+			if(!empty($_POST['reset-font-defaults']) && $_POST['reset-font-defaults'] == 'yes'){
+
+				// clear font options
+				update_option( 'tt_font_theme_options', array() );
+
+				// reset site color
+				remove_theme_mod( 'dtbwp_site_color' );
+
+				if(class_exists('dtbwp_customize_save_hook')){
+					$site_color_defaults = new dtbwp_customize_save_hook();
+					$site_color_defaults->save_color_options();
+				}
+
+
+				$file_name    = get_template_directory() . '/style.custom.css';
+				if(file_exists($file_name)) {
+					require_once( ABSPATH . 'wp-admin/includes/file.php' );
+					WP_Filesystem();
+					global $wp_filesystem;
+					$wp_filesystem->put_contents( $file_name, '' );
+				}
+				?>
+				<p><strong><?php _e('Options have been reset. Please go to Appearance > Customize in the WordPress backend.');?></strong></p>
+				<?php
+				return true;
+			}
+			return false;
 		}
 
 
@@ -612,7 +837,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				$plugins = $this->_get_plugins();
 				if ( count( $plugins['all'] ) ) {
 					?>
-					<p><?php _e( 'Your website needs a few essential plugins. The following plugins will be installed:', 'envato_setup' ); ?></p>
+					<p><?php _e( 'Your website needs a few essential plugins. The following plugins will be installed or updated:', 'envato_setup' ); ?></p>
 					<ul class="envato-wizard-plugins">
 						<?php foreach ( $plugins['all'] as $slug => $plugin ) {  ?>
 							<li data-slug="<?php echo esc_attr( $slug );?>"><?php echo esc_html( $plugin['name'] );?>
@@ -715,7 +940,38 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 
 			$content = array();
 
-			$content['pages'] = array(
+
+			/*$content['categories'] = array(
+				'title' => __( 'Categories', 'envato_setup' ),
+				'description' => __( 'Insert default Categories as seen in the demo.', 'envato_setup' ),
+				'pending' => __( 'Pending.', 'envato_setup' ),
+				'installing' => __( 'Installing.', 'envato_setup' ),
+				'success' => __( 'Success.', 'envato_setup' ),
+				'install_callback' => array( $this,'_content_install_categories' ),
+			);*/
+
+			// find out what content is in our default json file.
+			$available_content = $this->_get_json( 'default.json' );
+			foreach($available_content as $post_type => $post_data){
+				if(count($post_data)){
+					$first = current($post_data);
+					$post_type_title = !empty($first['type_title']) ? $first['type_title'] : ucwords( $post_type ).'s';
+					if($post_type_title == 'Navigation Menu Items'){
+						$post_type_title = 'Navigation';
+					}
+					$content[$post_type] = array(
+						'title' => $post_type_title,
+						'description' => sprintf( __( 'This will create default %s as seen in the demo.', 'envato_setup' ), $post_type_title ),
+						'pending' => __( 'Pending.', 'envato_setup' ),
+						'installing' => __( 'Installing.', 'envato_setup' ),
+						'success' => __( 'Success.', 'envato_setup' ),
+						'install_callback' => array( $this,'_content_install_type' ),
+						'checked' => $this->is_possible_upgrade() ? 0 : 1 // dont check if already have content installed.
+					);
+				}
+			}
+
+			/*$content['pages'] = array(
 				'title' => __( 'Pages', 'envato_setup' ),
 				'description' => __( 'This will create default pages as seen in the demo.', 'envato_setup' ),
 				'pending' => __( 'Pending.', 'envato_setup' ),
@@ -730,7 +986,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				'installing' => __( 'Installing Default Products.', 'envato_setup' ),
 				'success' => __( 'Success.', 'envato_setup' ),
 				'install_callback' => array( $this,'_content_install_products' ),
-			);
+			);*/
 			$content['widgets'] = array(
 				'title' => __( 'Widgets', 'envato_setup' ),
 				'description' => __( 'Insert default sidebar widgets as seen in the demo.', 'envato_setup' ),
@@ -738,15 +994,16 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				'installing' => __( 'Installing Default Widgets.', 'envato_setup' ),
 				'success' => __( 'Success.', 'envato_setup' ),
 				'install_callback' => array( $this,'_content_install_widgets' ),
+				'checked' => $this->is_possible_upgrade() ? 0 : 1 // dont check if already have content installed.
 			);
-			$content['menu'] = array(
+			/*$content['menu'] = array(
 				'title' => __( 'Menu', 'envato_setup' ),
 				'description' => __( 'Insert default menu as seen in the demo.', 'envato_setup' ),
 				'pending' => __( 'Pending.', 'envato_setup' ),
 				'installing' => __( 'Installing Default Menu.', 'envato_setup' ),
 				'success' => __( 'Success.', 'envato_setup' ),
 				'install_callback' => array( $this,'_content_install_menu' ),
-			);
+			);*/
 			$content['settings'] = array(
 				'title' => __( 'Settings', 'envato_setup' ),
 				'description' => __( 'Configure default settings.', 'envato_setup' ),
@@ -754,7 +1011,10 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				'installing' => __( 'Installing Default Settings.', 'envato_setup' ),
 				'success' => __( 'Success.', 'envato_setup' ),
 				'install_callback' => array( $this,'_content_install_settings' ),
+				'checked' => $this->is_possible_upgrade() ? 0 : 1 // dont check if already have content installed.
 			);
+
+			$content = apply_filters( $this->theme_name . '_theme_setup_wizard_content', $content );
 
 			return $content;
 
@@ -767,7 +1027,11 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			?>
 			<h1><?php _e( 'Default Content', 'envato_setup' ); ?></h1>
 			<form method="post">
-				<p><?php printf( __( 'It\'s time to insert some default content for your new WordPress website. Choose what you would like inserted below and click Continue.', 'envato_setup' ), '<a href="' . esc_url( admin_url( 'edit.php?post_type=page' ) ) . '" target="_blank">', '</a>' ); ?></p>
+				<?php if($this->is_possible_upgrade()){ ?>
+					<p><?php _e('It looks like you already have content installed on this website. If you would like to install the default demo content as well you can select it below. Otherwise just choose the upgrade option to ensure everything is up to date.'); ?></p>
+				<?php }else{ ?>
+					<p><?php printf( __( 'It\'s time to insert some default content for your new WordPress website. Choose what you would like inserted below and click Continue. It is recommended to leave everything selected. Once inserted, this content can be managed from the WordPress admin dashboard. ', 'envato_setup' ), '<a href="' . esc_url( admin_url( 'edit.php?post_type=page' ) ) . '" target="_blank">', '</a>' ); ?></p>
+				<?php } ?>
 				<table class="envato-setup-pages" cellspacing="0">
 					<thead>
 					<tr>
@@ -781,7 +1045,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 					<?php foreach ( $this->_content_default_get() as $slug => $default ) {  ?>
 						<tr class="envato_default_content" data-content="<?php echo esc_attr( $slug );?>">
 							<td>
-								<input type="checkbox" name="default_content[pages]" class="envato_default_content" id="default_content_<?php echo esc_attr( $slug );?>" value="1" checked>
+								<input type="checkbox" name="default_content[<?php echo esc_attr( $slug );?>]" class="envato_default_content" id="default_content_<?php echo esc_attr( $slug );?>" value="1" <?php echo (!isset($default['checked']) || $default['checked']) ? ' checked':'';?>>
 							</td>
 							<td><label for="default_content_<?php echo esc_attr( $slug );?>"><?php echo $default['title']; ?></label></td>
 							<td class="description"><?php echo $default['description']; ?></td>
@@ -790,8 +1054,6 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 					<?php } ?>
 					</tbody>
 				</table>
-
-				<p><?php _e( 'Once inserted, this content can be managed from the WordPress admin dashboard.', 'envato_setup' ); ?></p>
 
 				<p class="envato-setup-actions step">
 					<a href="<?php echo esc_url( $this->get_next_step_link() ); ?>" class="button-primary button button-large button-next" data-callback="install_content"><?php _e( 'Continue', 'envato_setup' ); ?></a>
@@ -817,11 +1079,25 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 
 				if ( ! empty( $this_content['install_callback'] ) ) {
 					if ( $result = call_user_func( $this_content['install_callback'] ) ) {
-						$json = array(
-							'done' => 1,
-							'message' => $this_content['success'],
-							'debug' => $result,
-						);
+						if( is_array( $result ) && isset( $result['retry'] ) ){
+							// we split the stuff up again.
+							$json = array(
+								'url' => admin_url( 'admin-ajax.php' ),
+								'action' => 'envato_setup_content',
+								'proceed' => 'true',
+								'retry' => time(),
+								'retry_count' => $result['retry_count'],
+								'content' => $_POST['content'],
+								'_wpnonce' => wp_create_nonce( 'envato_setup_nonce' ),
+								'message' => $this_content['installing'],
+							);
+						}else{
+							$json = array(
+								'done' => 1,
+								'message' => $this_content['success'],
+								'debug' => $result,
+							);
+						}
 					}
 				}
 			} else {
@@ -847,96 +1123,613 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 
 		}
 
-		private function _import_wordpress_xml_file( $xml_file_path ) {
-			global $wpdb;
 
-			if ( ! defined( 'WP_LOAD_IMPORTERS' ) ) { define( 'WP_LOAD_IMPORTERS', true ); }
 
-			// Load Importer API
-			require_once ABSPATH . 'wp-admin/includes/import.php';
+		private function _imported_term_id( $original_term_id , $new_term_id = false ){
+			$terms = get_transient('importtermids');
+			if(!is_array($terms))$terms = array();
+			if($new_term_id){
+				$terms[$original_term_id] = $new_term_id;
+				set_transient('importtermids', $terms, 60 * 60 * 24 );
+			}else if($original_term_id && isset($terms[$original_term_id])){
+				return $terms[$original_term_id];
+			}
+			return false;
+		}
 
-			if ( ! class_exists( 'WP_Importer' ) ) {
-				$class_wp_importer = ABSPATH . 'wp-admin/includes/class-wp-importer.php';
-				if ( file_exists( $class_wp_importer ) ) {
-					require $class_wp_importer;
+		/*private function _content_install_categories(){
+			$all_data = $this->_get_json('categories.json');
+			foreach($all_data as $data_id => $cat) {
+
+				$term_id = term_exists( $cat['category_nicename'], 'category' );
+				if ( $term_id ) {
+					if ( is_array( $term_id ) ) { $term_id = $term_id['term_id']; }
+					if ( isset( $cat['term_id'] ) ) {
+						$this->_imported_term_id( intval( $cat['term_id'] ), (int) $term_id );
+					}
+					continue;
+				}
+				if(!empty( $cat['category_parent'] )){
+					// see if we have imported this yet?
+					$cat['category_parent'] = $this->_imported_term_id($cat['category_parent']);
+				}
+
+				$category_parent      = empty( $cat['category_parent'] ) ? 0 : $cat['category_parent']; //category_exists( $cat['category_parent'] );
+				$category_description = isset( $cat['category_description'] ) ? $cat['category_description'] : '';
+				$catarr               = array(
+					'category_nicename'    => $cat['category_nicename'],
+					'category_parent'      => $category_parent,
+					'cat_name'             => $cat['cat_name'],
+					'category_description' => $category_description,
+				);
+
+				$id = wp_insert_category( $catarr );
+				if ( ! is_wp_error( $id ) ) {
+					if ( isset( $cat['term_id'] ) ) {
+						$this->_imported_term_id( intval( $cat['term_id'] ), $id );
+					}
 				}
 			}
 
-			if ( ! class_exists( 'WP_Import' ) ) {
-				$class_wp_importer = __DIR__ .'/importer/wordpress-importer.php';
-				if ( file_exists( $class_wp_importer ) ) {
-					require $class_wp_importer; }
-			}
+			return true;
 
-			if ( class_exists( 'WP_Import' ) ) {
-				require_once __DIR__ .'/importer/envato-content-import.php';
-				$wp_import = new envato_content_import();
-				$wp_import->fetch_attachments = true;
-				ob_start();
-				$wp_import->import( $xml_file_path );
-				$message = ob_get_clean();
-				return array( $wp_import->check(),$message );
+		}*/
+
+
+		private function _imported_post_id( $original_id = false , $new_id = false ){
+			if(is_array($original_id) || is_object($original_id))return false;
+			$post_ids = get_transient('importpostids');
+			if(!is_array($post_ids))$post_ids = array();
+			if($new_id){
+				$post_ids[$original_id] = $new_id;
+				set_transient('importpostids', $post_ids, 60 * 60 * 24 );
+			}else if($original_id && isset($post_ids[$original_id])){
+				return $post_ids[$original_id];
+			}else if($original_id === false){
+				return $post_ids;
+			}
+			return false;
+		}
+		private function _post_orphans( $original_id = false, $missing_parent_id = false ){
+			$post_ids = get_transient('postorphans');
+			if(!is_array($post_ids))$post_ids = array();
+			if($missing_parent_id){
+				$post_ids[$original_id] = $missing_parent_id;
+				set_transient('postorphans', $post_ids, 60 * 60 * 24 );
+			}else if($original_id && isset($post_ids[$original_id])){
+				return $post_ids[$original_id];
+			}else if($original_id === false){
+				return $post_ids;
 			}
 			return false;
 		}
 
-		private function _content_install_pages() {
-			return $this->_import_wordpress_xml_file( __DIR__ .'/content/all.xml' );
+		private function _cleanup_imported_ids(){
+			// loop over all attachments and assign the correct post ids to those attachments.
+
 		}
-		private function _content_install_products() {
-			if ( $this->_import_wordpress_xml_file( __DIR__ .'/content/products.xml' ) ) {
-				return $this->_import_wordpress_xml_file( __DIR__ .'/content/variations.xml' );
+
+		private $delay_posts = array();
+		private function _delay_post_process( $post_type, $post_data ){
+			if(!isset($this->delay_posts[$post_type]))$this->delay_posts[$post_type]= array();
+			$this->delay_posts[$post_type][] = $post_data;
+		}
+
+
+		// return the difference in length between two strings
+		public function cmpr_strlen( $a, $b ) {
+			return strlen( $b ) - strlen( $a );
+		}
+
+		private function _process_post_data( $post_type, $post_data, $delayed = false ){
+
+			if ( ! post_type_exists( $post_type ) ) {
+				return false;
 			}
-			return false;
-		}
-		private function _get_menu_ids() {
-			$menus = get_terms( 'nav_menu' );
-			$menu_ids = array();
-			foreach ( $menus as $menu ) {
-				if ( $menu->name == 'Main Menu' ) {
-					$menu_ids['primary'] = $menu->term_id;
-				} else if ( $menu->name == 'Quick Links' ) {
-					$menu_ids['footer_quick'] = $menu->term_id;
+			/*if ( 'nav_menu_item' == $post_type ) {
+				$this->process_menu_item( $post );
+				continue;
+			}*/
+
+			if(empty($post_data['post_title']) && empty($post_data['post_name'])){
+				// this is menu items
+				$post_data['post_name'] = $post_data['post_id'];
+			}
+
+			$post_data['post_type'] = $post_type;
+
+			$post_parent = (int) $post_data['post_parent'];
+			if ( $post_parent ) {
+				// if we already know the parent, map it to the new local ID
+				if ( $this->_imported_post_id( $post_parent ) ) {
+					$post_data['post_parent'] = $this->_imported_post_id( $post_parent );
+					// otherwise record the parent for later
+				} else {
+					$this->_post_orphans( intval( $post_data['post_id'] ) , $post_parent);
+					$post_data['post_parent'] = 0;
 				}
 			}
-			return $menu_ids;
-		}
-		private function _content_install_menu() {
-			//if($this->_import_wordpress_xml_file(__DIR__ ."/content/menu.xml")){
-			$menu_ids = $this->_get_menu_ids();
-			$save = array();
-			if ( isset( $menu_ids['primary'] ) ) {
-				$save['primary'] = $menu_ids['primary'];
+
+			// check if already exists
+			if( empty($post_data['post_title']) && !empty($post_data['post_name'])){
+				global $wpdb;
+				$sql = "
+					SELECT ID, post_name, post_parent, post_type
+					FROM $wpdb->posts
+					WHERE post_name = %s
+					AND post_type = %s
+				";
+				$pages = $wpdb->get_results( $wpdb->prepare($sql,array($post_data['post_name'], $post_type)), OBJECT_K );
+				$foundid = 0;
+				foreach ( (array) $pages as $page ) {
+					if($page->post_name == $post_data['post_name'] && empty($page->post_title)){
+						$foundid = $page->ID;
+					}
+				}
+				if($foundid){
+					$this->_imported_post_id( $post_data['post_id'], $foundid );
+					return true;
+				}
 			}
-			if ( $save ) {
-				set_theme_mod( 'nav_menu_locations', array_map( 'absint', $save ) );
-				return true;
+			$post_exists = post_exists( $post_data['post_title'] ); //, '', $post_data['post_date_gmt'] );
+			if ( $post_exists && get_post_type( $post_exists ) == $post_type ) {
+				$existing_post = get_post($post_exists);
+				if(!empty($post_data['post_title']) || (empty($post_data['post_title']) && $existing_post->post_name == $post_data['post_name'])) {
+					// this is the same.
+					$this->_imported_post_id( $post_data['post_id'], $post_exists );
+//					echo $post_data['post_id'] . " title " . $post_data['post_title'] . " already exists 1: $post_exists\n";
+					return true;
+				}
 			}
-			//}
-			return false;
+			/*$date2 = get_date_from_gmt($post_data['post_date_gmt']);
+			$post_exists = post_exists( $post_data['post_title'], '', $date2 );
+			if ( $post_exists && get_post_type( $post_exists ) == $post_type ) {
+				$existing_post = get_post($post_exists);
+				if(!empty($post_data['post_title']) || (empty($post_data['post_title']) && $existing_post->post_name == $post_data['post_name'])) {
+					$this->_imported_post_id( $post_data['post_id'], $post_exists );
+//					echo $post_data['post_id'] . " already exists 2\n";
+					return true;
+				}
+			}
+			if(!empty($post_data['post_date'])) {
+				$post_exists = post_exists( $post_data['post_title'], '', $post_data['post_date'] );
+				if ( $post_exists && get_post_type( $post_exists ) == $post_type ) {
+					$existing_post = get_post($post_exists);
+					if(!empty($post_data['post_title']) || (empty($post_data['post_title']) && $existing_post->post_name == $post_data['post_name'])) {
+						$this->_imported_post_id( $post_data['post_id'], $post_exists );
+//						echo $post_data['post_id'] . " already exists 3\n";
+						return true;
+					}
+				}
+			}*/
+			switch($post_type){
+				case 'attachment':
+					// import media via url
+					if(!empty($post_data['guid'])){
+
+						// check if this has already been imported.
+						$old_guid = $post_data['guid'];
+						if($this->_imported_post_id( $old_guid)){
+							return true; // alrady done;
+						}
+						// ignore post parent, we haven't imported those yet.
+//							$file_data = wp_remote_get($post_data['guid']);
+						$remote_url = $post_data['guid'];
+
+						$post_data['upload_date'] = date('Y/m',strtotime($post_data['post_date_gmt']));
+						if ( isset( $post_data['meta'] ) ) {
+							foreach ( $post_data['meta'] as $key => $meta ) {
+								if ( $key == '_wp_attached_file' ) {
+									foreach((array)$meta as $meta_val) {
+										if ( preg_match( '%^[0-9]{4}/[0-9]{2}%', $meta_val, $matches ) ) {
+											$post_data['upload_date'] = $matches[0];
+										}
+									}
+								}
+							}
+						}
+
+						$upload = $this->_fetch_remote_file( $remote_url, $post_data );
+
+						if ( !is_array($upload) || is_wp_error( $upload ) ) {
+							// todo: error
+							return false;
+						}
+
+						if ( $info = wp_check_filetype( $upload['file'] ) ) {
+							$post['post_mime_type'] = $info['type'];
+						} else {
+							return false;
+//								return new WP_Error( 'attachment_processing_error', __( 'Invalid file type', 'wordpress-importer' ) );
+						}
+
+						$post_data['guid'] = $upload['url'];
+
+						// as per wp-admin/includes/upload.php
+						$post_id = wp_insert_attachment( $post_data, $upload['file'] );
+						wp_update_attachment_metadata( $post_id, wp_generate_attachment_metadata( $post_id, $upload['file'] ) );
+
+						// remap resized image URLs, works by stripping the extension and remapping the URL stub.
+						if ( preg_match( '!^image/!', $info['type'] ) ) {
+							$parts = pathinfo( $remote_url );
+							$name = basename( $parts['basename'], ".{$parts['extension']}" ); // PATHINFO_FILENAME in PHP 5.2
+
+							$parts_new = pathinfo( $upload['url'] );
+							$name_new = basename( $parts_new['basename'], ".{$parts_new['extension']}" );
+
+							$this->_imported_post_id( $parts['dirname'] . '/' . $name , $parts_new['dirname'] . '/' . $name_new );
+						}
+						$this->_imported_post_id( $post_data['post_id'], $post_id );
+						$this->_imported_post_id( $old_guid, $post_id );
+
+					}
+					break;
+				default:
+					// work out if we have to delay this post insertion
+					if ( ! empty( $post_data['meta'] ) ) {
+						foreach ( $post_data['meta'] as $meta_key => $meta_val ) {
+
+							// export gets meta straight from the DB so could have a serialized string
+							$meta_val = maybe_unserialize( $meta_val );
+							if ( is_array( $meta_val ) && count( $meta_val ) == 1 ) {
+								$meta_val = current( $meta_val );
+							}
+
+							if ( ( $meta_key == '_menu_item_object_id' || $meta_key == '_menu_item_menu_item_parent' ) && $meta_val ) {
+								// we get the linked page id that we should have previously entered.
+//								echo "Trying to find meta key $meta_key value $meta_val and got.... ";
+								$meta_val = $this->_imported_post_id( $meta_val );
+//								echo " $meta_val \n\n";
+								if ( ! $meta_val ) {
+									if ( $delayed ) {
+//										echo "Failed, already delayed ".$post_data['post_id']."\n\n";
+										// already delayed, unable to find this meta value, skip inserting it
+										return false;
+									} else {
+//										echo "Delaying post id ".$post_data['post_id']."... \n\n";
+										$this->_delay_post_process( $post_type, $post_data );
+
+										return true;
+									}
+								}
+							}
+						}
+					}
+
+					// we have to format the post content. rewriting images and gallery stuff
+					$replace = $this->_imported_post_id();
+					$urls_replace = array();
+					foreach($replace as $key=>$val){
+						if($key && $val && !is_numeric($key) && !is_numeric($val)){
+							$urls_replace[$key] = $val;
+						}
+					}
+					if($urls_replace) {
+						uksort( $urls_replace, array( &$this, 'cmpr_strlen' ) );
+						foreach ( $urls_replace as $from_url => $to_url ) {
+							$post_data['post_content'] = str_replace($from_url, $to_url, $post_data['post_content']);
+						}
+					}
+					if(preg_match_all('#\[gallery[^\]]*\]#',$post_data['post_content'],$matches)){
+						foreach($matches[0] as $match_id => $string){
+							if(preg_match('#ids="([^"]+)"#',$string,$ids_matches)){
+								$ids = explode(",",$ids_matches[1]);
+								foreach($ids as $key=>$val){
+									$new_id = $val ? $this->_imported_post_id($val) : false;
+									if(!$new_id)unset($ids[$key]);
+									else $ids[$key] = $new_id;
+								}
+								$new_ids = implode(',',$ids);
+								$post_data['post_content'] = str_replace($ids_matches[0], 'ids="'.$new_ids.'"', $post_data['post_content']);
+							}
+						}
+					}
+					// we have to fix up all the visual composer inserted image ids
+					if(preg_match_all('#parallax_image="(\d+)"#',$post_data['post_content'],$matches)){
+						foreach($matches[0] as $match_id => $string){
+							$new_id = $this->_imported_post_id($matches[1][$match_id]);
+							if($new_id){
+								$post_data['post_content'] = str_replace($string, 'parallax_image="'.$new_id.'"', $post_data['post_content']);
+							}
+						}
+					}
+					if(preg_match_all('# image="(\d+)"#',$post_data['post_content'],$matches)){
+						foreach($matches[0] as $match_id => $string){
+							$new_id = $this->_imported_post_id($matches[1][$match_id]);
+							if($new_id){
+								$post_data['post_content'] = str_replace($string, ' image="'.$new_id.'"', $post_data['post_content']);
+							}
+						}
+					}
+					// contact form 7 id fixes.
+					if(preg_match_all('#\[contact-form-7[^\]]*\]#',$post_data['post_content'],$matches)){
+						foreach($matches[0] as $match_id => $string){
+							if(preg_match('#id="(\d+)"#',$string,$id_match)){
+								$new_id = $this->_imported_post_id($id_match[1]);
+								if($new_id) {
+									$post_data['post_content'] = str_replace($id_match[0], 'id="'.$new_id.'"', $post_data['post_content']);
+								}else{
+									// no imported ID found. remove this entry.
+									$post_data['post_content'] = str_replace($matches[0], '(insert contact form here)', $post_data['post_content']);
+								}
+							}
+						}
+					}
+
+					$post_id = wp_insert_post( $post_data, true );
+//					echo "Processing ".$post_data['post_id']." \n\n";
+					if ( !is_wp_error( $post_id ) ) {
+						$this->_imported_post_id( $post_data['post_id'], $post_id );
+						// add/update post meta
+						if ( ! empty( $post_data['meta'] ) ) {
+							foreach ( $post_data['meta'] as $meta_key => $meta_val ) {
+
+								// export gets meta straight from the DB so could have a serialized string
+								$meta_val = maybe_unserialize( $meta_val );
+								if(is_array($meta_val) && count($meta_val) == 1){
+									$meta_val = current($meta_val);
+								}
+
+								if( ( $meta_key == '_menu_item_object_id' || $meta_key == '_menu_item_menu_item_parent' ) && $meta_val ){
+									// we get the linked page id that we should have previously entered.
+									$meta_val = $this->_imported_post_id( $meta_val );
+									if(!$meta_val){
+										continue;
+									}
+								}
+
+								$meta_val = maybe_unserialize( $meta_val );
+
+								// if the post has a featured image, take note of this in case of remap
+								if ( '_thumbnail_id' == $meta_key ) {
+									/// find this inserted id and use that instead.
+									$inserted_id = $this->_imported_post_id( intval( $meta_val ) );
+									if($inserted_id){
+										$meta_val = $inserted_id;
+									}
+								}
+//									echo "Post meta $meta_key was $meta_val \n\n";
+
+								update_post_meta( $post_id, $meta_key, $meta_val );
+
+							}
+						}
+						if ( ! empty( $post_data['terms'] ) ) {
+							$terms_to_set = array();
+							foreach ( $post_data['terms'] as $term_slug => $terms ) {
+								foreach($terms as $term) {
+									//									echo "Adding category;";print_r($term);echo "\n\n";
+									/*"term_id": 21,
+									"name": "Tea",
+									"slug": "tea",
+									"term_group": 0,
+									"term_taxonomy_id": 21,
+									"taxonomy": "category",
+									"description": "",
+									"parent": 0,
+									"count": 1,
+									"filter": "raw"*/
+									$taxonomy    =  $term['taxonomy'];
+									if(taxonomy_exists($taxonomy)) {
+										$term_exists = term_exists( $term['slug'], $taxonomy );
+										$term_id     = is_array( $term_exists ) ? $term_exists['term_id'] : $term_exists;
+										if ( ! $term_id ) {
+											if(!empty( $term['parent'] )){
+												// see if we have imported this yet?
+												$term['parent'] = $this->_imported_term_id($term['parent']);
+											}
+
+											$t = wp_insert_term( $term['name'], $taxonomy, $term );
+											if ( ! is_wp_error( $t ) ) {
+												$term_id = $t['term_id'];
+												//do_action( 'wp_import_insert_term', $t, $term, $post_id, $post );
+											} else {
+												// todo - error
+												continue;
+											}
+										}
+										$this->_imported_term_id($term['term_id'], $term_id);
+										$terms_to_set[ $taxonomy ][] = intval( $term_id );
+									}
+								}
+							}
+							foreach ( $terms_to_set as $tax => $ids ) {
+								wp_set_post_terms( $post_id, $ids, $tax );
+							}
+						}
+					}
+
+					break;
+			}
+			return true;
 		}
+
+		private function _content_install_type(){
+			$post_type = !empty($_POST['content']) ? $_POST['content'] : false;
+			$all_data = $this->_get_json('default.json');
+			if(!$post_type || !isset($all_data[$post_type])){
+				return false;
+			}
+			$limit = 10 + (isset($_REQUEST['retry_count']) ? (int)$_REQUEST['retry_count'] : 0);
+			$x = 0;
+			foreach($all_data[$post_type] as $post_data){
+
+				$this->_process_post_data($post_type, $post_data);
+
+				if($x++ > $limit){
+					return array('retry' => 1, 'retry_count' => $limit);
+				}
+
+			}
+
+			foreach($this->delay_posts as $delayed_post_type => $delayed_post_datas){
+				foreach($delayed_post_datas as $delayed_post_id => $delayed_post_data){
+					unset($this->delay_posts[$delayed_post_type][$delayed_post_id]);
+					//echo "Processing delayed post $delayed_post_type id ".$delayed_post_data['post_id']."\n\n";
+					$this->_process_post_data($delayed_post_type, $delayed_post_data);
+				}
+			}
+			foreach($this->delay_posts as $delayed_post_type => $delayed_post_datas){
+				foreach($delayed_post_datas as $delayed_post_id => $delayed_post_data){
+					unset($this->delay_posts[$delayed_post_type][$delayed_post_id]);
+					//echo "Processing delayed post $delayed_post_type id ".$delayed_post_data['post_id']."\n\n";
+					$this->_process_post_data($delayed_post_type, $delayed_post_data, true);
+				}
+			}
+
+			$this->_handle_post_orphans();
+
+			// now we have to handle any custom SQL queries. This is needed for the events manager to store location and event details.
+			$sql = $this->_get_sql(basename($post_type).'.sql');
+			if($sql){
+				global $wpdb;
+				// do a find-replace with certain keys.
+				if(preg_match_all('#__POSTID_(\d+)__#',$sql,$matches)){
+					foreach($matches[0] as $match_id => $match){
+						$new_id = $this->_imported_post_id($matches[1][$match_id]);
+						if(!$new_id)$new_id = 0;
+						$sql = str_replace($match,$new_id,$sql);
+					}
+				}
+				$sql = str_replace("__DBPREFIX__",$wpdb->prefix,$sql);
+				$bits = preg_split("/;(\s*\n|$)/", $sql);
+				foreach($bits as $bit){
+					$bit = trim($bit);
+					if($bit){
+						$wpdb->query($bit);
+					}
+				}
+			}
+
+			return true;
+
+		}
+
+		private function _handle_post_orphans(){
+			$orphans = $this->_post_orphans();
+			foreach($orphans as $original_post_id => $original_post_parent_id){
+				if($original_post_parent_id) {
+					if ( $this->_imported_post_id( $original_post_id ) && $this->_imported_post_id( $original_post_parent_id ) ) {
+						$post_data = array();
+						$post_data['ID'] = $this->_imported_post_id( $original_post_id );
+						$post_data['post_parent'] = $this->_imported_post_id( $original_post_parent_id );
+						wp_update_post( $post_data );
+						$this->_post_orphans( $original_post_id, 0 ); // ignore future
+					}
+				}
+			}
+		}
+
+		private function _fetch_remote_file( $url, $post ) {
+			// extract the file name and extension from the url
+			$file_name = basename( $url );
+			$local_file = trailingslashit(get_template_directory()).'images/stock/'.$file_name;
+			$upload = false;
+			if( is_file( $local_file ) && filesize( $local_file ) > 0 ) {
+				require_once( ABSPATH . 'wp-admin/includes/file.php' );
+				WP_Filesystem();
+				global $wp_filesystem;
+				$file_data = $wp_filesystem->get_contents( $local_file );
+				$upload = wp_upload_bits( $file_name, 0, $file_data, $post['upload_date'] );
+				if ( $upload['error'] ) {
+					return new WP_Error( 'upload_dir_error', $upload['error'] );
+				}
+			}
+
+			if ( !$upload || $upload['error'] ) {
+				// get placeholder file in the upload dir with a unique, sanitized filename
+				$upload = wp_upload_bits( $file_name, 0, '', $post['upload_date'] );
+				if ( $upload['error'] ) {
+					return new WP_Error( 'upload_dir_error', $upload['error'] );
+				}
+
+				// fetch the remote url and write it to the placeholder file
+				//$headers = wp_get_http( $url, $upload['file'] );
+
+				$max_size = (int) apply_filters( 'import_attachment_size_limit', 0 );
+
+				// we check if this file is uploaded locally in the source folder.
+				$response = wp_remote_get( $url );
+				if ( is_array( $response ) && !empty($response['body']) && $response['response']['code'] == '200' ) {
+					require_once( ABSPATH . 'wp-admin/includes/file.php' );
+					$headers = $response['headers'];
+					WP_Filesystem();
+					global $wp_filesystem;
+					$wp_filesystem->put_contents( $upload['file'], $response['body'] );
+					//
+				} else {
+					// required to download file failed.
+					@unlink( $upload['file'] );
+					return new WP_Error( 'import_file_error', __( 'Remote server did not respond', 'wordpress-importer' ) );
+				}
+
+
+				$filesize = filesize( $upload['file'] );
+
+				if ( isset( $headers['content-length'] ) && $filesize != $headers['content-length'] ) {
+					@unlink( $upload['file'] );
+
+					return new WP_Error( 'import_file_error', __( 'Remote file is incorrect size', 'wordpress-importer' ) );
+				}
+
+				if ( 0 == $filesize ) {
+					@unlink( $upload['file'] );
+
+					return new WP_Error( 'import_file_error', __( 'Zero size file downloaded', 'wordpress-importer' ) );
+				}
+
+				if ( ! empty( $max_size ) && $filesize > $max_size ) {
+					@unlink( $upload['file'] );
+
+					return new WP_Error( 'import_file_error', sprintf( __( 'Remote file is too large, limit is %s', 'wordpress-importer' ), size_format( $max_size ) ) );
+				}
+			}
+
+			// keep track of the old and new urls so we can substitute them later
+			$this->_imported_post_id( $url, $upload['url']);
+			$this->_imported_post_id( $post['guid'], $upload['url']);
+			// keep track of the destination if the remote url is redirected somewhere else
+			if ( isset( $headers['x-final-location'] ) && $headers['x-final-location'] != $url ) {
+				$this->_imported_post_id( $headers['x-final-location'], $upload['url'] );
+			}
+
+			return $upload;
+		}
+
+
 		private function _content_install_widgets() {
 			// todo: pump these out into the 'content/' folder along with the XML so it's a little nicer to play with
 			$import_widget_positions = $this->_get_json( 'widget_positions.json' );
 			$import_widget_options = $this->_get_json( 'widget_options.json' );
-			$menu_ids = $this->_get_menu_ids();
 
 			// importing.
 			$widget_positions = get_option( 'sidebars_widgets' );
-			// adjust the widget settings to match our menu ID's which we discovered above.
-			if ( is_array( $import_widget_options ) && isset( $import_widget_options['nav_menu'] ) ) {
-				foreach ( $import_widget_options['nav_menu'] as $key => $val ) {
-					if ( ! empty( $val['title'] ) ) {
-						if ( ($val['title'] == 'Quick Links' || $val['title'] == 'Quick  Links') && ! empty( $menu_ids['footer_quick'] ) ) {
-							$import_widget_options['nav_menu'][ $key ]['nav_menu'] = $menu_ids['footer_quick'];
+
+			//                    echo '<pre>'; print_r($import_widget_positions); print_r($import_widget_options); print_r($my_options); echo '</pre>';exit;
+			foreach ( $import_widget_options as $widget_name => $widget_options ) {
+				// replace certain elements with updated imported entries.
+				foreach($widget_options as $widget_option_id => $widget_option){
+					if(!empty($widget_option['nav_menu'])){
+						// check if this one has been imported yet.
+						$new_id = $this->_imported_term_id($widget_option['nav_menu']);
+						if(!$new_id){
+							unset($widget_options[$widget_option_id]);
+						}else{
+							$widget_options[$widget_option_id]['nav_menu'] = $new_id;
+						}
+					}
+					if(!empty($widget_option['image_id'])){
+						// check if this one has been imported yet.
+						$new_id = $this->_imported_post_id($widget_option['image_id']);
+						if(!$new_id){
+							unset($widget_options[$widget_option_id]);
+						}else{
+							$widget_options[$widget_option_id]['image_id'] = $new_id;
 						}
 					}
 				}
-			}
-			//                    echo '<pre>'; print_r($import_widget_positions); print_r($import_widget_options); print_r($my_options); echo '</pre>';exit;
-			foreach ( $import_widget_options as $widget_name => $widget_option ) {
 				$existing_options = get_option( 'widget_'.$widget_name,array() );
-				$new_options = $existing_options + $widget_option;
+				$new_options = $existing_options + $widget_options;
 				//                        echo $widget_name;
 				//                        print_r($new_options);
 				update_option( 'widget_'.$widget_name,$new_options );
@@ -947,29 +1740,68 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			return true;
 
 		}
-		private function _content_install_settings() {
+		public function _content_install_settings() {
+
+
+			$menu_ids = $this->_get_json( 'menu.json' );
+			$save = array();
+			foreach($menu_ids as $menu_id => $term_id){
+				$new_term_id = $this->_imported_term_id($term_id);
+				if($new_term_id){
+					$save[$menu_id] = $new_term_id;
+				}
+			}
+			if ( $save ) {
+				set_theme_mod( 'nav_menu_locations', array_map( 'absint', $save ) );
+			}
 
 			$custom_options = $this->_get_json( 'options.json' );
 
 			// we also want to update the widget area manager options.
 			foreach ( $custom_options as $option => $value ) {
+				// we have to update widget page numbers with imported page numbers.
+				if(
+					preg_match('#(wam__position_)(\d+)_#',$option,$matches) ||
+					preg_match('#(wam__area_)(\d+)_#',$option,$matches)
+				){
+					$new_page_id = $this->_imported_post_id($matches[2]);
+					if($new_page_id){
+						// we have a new page id for this one. import the new setting value.
+						$option = str_replace($matches[1].$matches[2].'_', $matches[1].$new_page_id.'_', $option);
+					}
+				}
+				if($option == 'dtbaker_featured_images'){
+					$value = maybe_unserialize($value);
+					$new_values = array();
+					if(is_array($value)){
+						foreach($value as $cat_id => $image_id){
+							$new_cat_id = $this->_imported_term_id($cat_id);
+							$new_image_id = $this->_imported_post_id($image_id);
+							if($new_cat_id && $new_image_id){
+								$new_values[$new_cat_id] = $new_image_id;
+							}
+						}
+					}
+					$value = $new_values;
+				}
 				update_option( $option, $value );
-			}
-			// set full width page
-			$aboutpage = get_page_by_title( 'Full Width Page' );
-			if ( $aboutpage ) {
-				//"wam__position_126_main":"pos_hidden"
-				update_option( 'wam__position_' . $aboutpage->ID . '_main', 'pos_hidden' );
-			}
-			// set full sidebar widgets page on about
-			$aboutpage = get_page_by_title( 'About' );
-			if ( $aboutpage ) {
-				update_option( 'wam__area_' . $aboutpage->ID . '_main', 'widget_area-6' );
 			}
 			// set the blog page and the home page.
 			$shoppage = get_page_by_title( 'Shop' );
 			if ( $shoppage ) {
 				update_option( 'woocommerce_shop_page_id',$shoppage->ID );
+			}
+			$shoppage = get_page_by_title( 'Cart' );
+			if ( $shoppage ) {
+				update_option( 'woocommerce_cart_page_id',$shoppage->ID );
+			}
+			$shoppage = get_page_by_title( 'Checkout' );
+			if ( $shoppage ) {
+				update_option( 'woocommerce_checkout_page_id',$shoppage->ID );
+			}
+			$shoppage = get_page_by_title( 'My Account' );
+			if ( $shoppage ) {
+				update_option( 'woocommerce_myaccount_page_id',$shoppage->ID );
 			}
 			$homepage = get_page_by_title( 'Home' );
 			if ( $homepage ) {
@@ -981,6 +1813,11 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				update_option( 'page_for_posts', $blogpage->ID );
 				update_option( 'show_on_front', 'page' );
 			}
+
+			global $wp_rewrite;
+			$wp_rewrite->set_permalink_structure('/%year%/%monthnum%/%day%/%postname%/');
+			update_option( "rewrite_rules", FALSE );
+			$wp_rewrite->flush_rules( true );
 
 			return true;
 		}
@@ -995,6 +1832,18 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			}
 			return array();
 		}
+		private function _get_sql( $file ) {
+			if ( is_file( __DIR__.'/content/'.basename( $file ) ) ) {
+				WP_Filesystem();
+				global $wp_filesystem;
+				$file_name = __DIR__ . '/content/' . basename( $file );
+				if ( file_exists( $file_name ) ) {
+					return $wp_filesystem->get_contents( $file_name );
+				}
+			}
+			return false;
+		}
+
 		/**
 		 * Logo & Design
 		 */
@@ -1003,20 +1852,21 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			?>
 			<h1><?php _e( 'Logo &amp; Design', 'envato_setup' ); ?></h1>
 			<form method="post">
-				<p><?php echo sprintf( __( 'Please add your logo below. For best results, the logo should be a transparent PNG ( 466 by 277 pixels). The logo can be changed at any time from the Appearance > Customize area in your dashboard. Try %sEnvato Studio%s if you need a new logo designed.' ,'envato_setup' ), '<a href="http://studiotracking.envato.com/aff_c?offer_id=4&aff_id=1564&source=DemoInstall" target="_blank">','</a>' ); ?></p>
+				<p><?php printf( __( 'Please add your logo below. For best results, the logo should be a transparent PNG ( 466 by 277 pixels). The logo can be changed at any time from the Appearance > Customize area in your dashboard. Try %sEnvato Studio%s if you need a new logo designed.' ,'envato_setup' ), '<a href="http://studiotracking.envato.com/aff_c?offer_id=4&aff_id=1564&source=DemoInstall" target="_blank">','</a>' ); ?></p>
 
 				<table>
 					<tr>
 						<td>
 							<div id="current-logo">
-								<?php $image_url = get_theme_mod( 'logo_header_image', get_template_directory_uri().'/images/'.get_theme_mod( 'beautiful_site_color','pink' ).'/logo.png' );
+								<?php $image_url = get_theme_mod( 'logo_header_image', get_template_directory_uri().'/images/'.get_theme_mod( 'dtbwp_site_color',$this->get_default_theme_style() ).'/logo.png' );
+								$image_url = apply_filters('envato_setup_logo_image',$image_url);
 								if ( $image_url ) {
 									$image = '<img class="site-logo" src="%s" alt="%s" style="width:%s; height:auto" />';
 									printf(
 										$image,
 										$image_url,
 										get_bloginfo( 'name' ),
-										'200px'
+										$this->get_header_logo_width()
 									);
 								} ?>
 							</div>
@@ -1027,22 +1877,28 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 					</tr>
 				</table>
 
+				<?php
+				$demo_styles = apply_filters( 'dtbwp_default_styles',array() );
+				if( !$this->get_default_theme_style() || !$demo_styles){
 
-				<p><?php _e( 'Please choose the color scheme for this website. The color scheme (along with font colors &amp; styles) can be changed at any time from the Appearance > Customize area in your dashboard.' ,'envato_setup' ); ?></p>
+				}else{
+					?>
 
-				<div class="theme-presets">
-					<ul>
-						<?php
-						$current_demo = get_theme_mod( 'beautiful_site_color','pink' );
-						$demo_styles = apply_filters( 'beautiful_default_styles',array() );
-						foreach ( $demo_styles as $demo_name => $demo_style ) {
-							?>
-							<li<?php echo $demo_name == $current_demo ? ' class="current" ' : '';?>>
-								<a href="#" data-style="<?php echo esc_attr( $demo_name );?>"><img src="<?php echo esc_url( $demo_style['image'] );?>"></a>
-							</li>
-						<?php } ?>
-					</ul>
-				</div>
+					<p><?php _e( 'Please choose the color scheme for this website. The color scheme (along with font colors &amp; styles) can be changed at any time from the Appearance > Customize area in your dashboard.' ,'envato_setup' ); ?></p>
+
+					<div class="theme-presets">
+						<ul>
+							<?php
+							$current_demo = get_theme_mod( 'dtbwp_site_color',$this->get_default_theme_style() );
+							foreach ( $demo_styles as $demo_name => $demo_style ) {
+								?>
+								<li<?php echo $demo_name == $current_demo ? ' class="current" ' : '';?>>
+									<a href="#" data-style="<?php echo esc_attr( $demo_name );?>"><img src="<?php echo esc_url( $demo_style['image'] );?>"></a>
+								</li>
+							<?php } ?>
+						</ul>
+					</div>
+				<?php } ?>
 
 				<p><em>Please Note: Advanced changes to website graphics/colors may require extensive PhotoShop and Web Development knowledge. We recommend hiring an expert from <a href="http://studiotracking.envato.com/aff_c?offer_id=4&aff_id=1564&source=DemoInstall" target="_blank">Envato Studio</a> to assist with any advanced website changes.</em></p>
 				<div style="display: none;">
@@ -1085,10 +1941,16 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				}
 			}
 
-			$new_style = $_POST['new_style'];
-			$demo_styles = apply_filters( 'beautiful_default_styles',array() );
-			if ( isset( $demo_styles[ $new_style ] ) ) {
-				set_theme_mod( 'beautiful_site_color',$new_style );
+			$new_style = isset($_POST['new_style']) ? $_POST['new_style'] : false;
+			if($new_style) {
+				$demo_styles = apply_filters( 'dtbwp_default_styles', array() );
+				if ( isset( $demo_styles[ $new_style ] ) ) {
+					set_theme_mod( 'dtbwp_site_color', $new_style );
+					if ( class_exists( 'dtbwp_customize_save_hook' ) ) {
+						$site_color_defaults = new dtbwp_customize_save_hook();
+						$site_color_defaults->save_color_options( $new_style );
+					}
+				}
 			}
 
 			wp_redirect( esc_url_raw( $this->get_next_step_link() ) );
@@ -1219,8 +2081,10 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 * Final step
 		 */
 		public function envato_setup_ready() {
+
+			update_option('envato_setup_complete',time());
 			?>
-			<a href="https://twitter.com/share" class="twitter-share-button" data-url="http://themeforest.net/user/dtbaker/portfolio?ref=dtbaker" data-text="<?php echo esc_attr( 'I just installed the Beautiful #WordPress theme from #ThemeForest' ); ?>" data-via="EnvatoMarket" data-size="large">Tweet</a>
+			<a href="https://twitter.com/share" class="twitter-share-button" data-url="http://themeforest.net/user/dtbaker/portfolio?ref=dtbaker" data-text="<?php echo esc_attr( 'I just installed the ' . wp_get_theme() .' #WordPress theme from #ThemeForest' ); ?>" data-via="EnvatoMarket" data-size="large">Tweet</a>
 			<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
 
 			<h1><?php _e( 'Your Website is Ready!', 'envato_setup' ); ?></h1>
