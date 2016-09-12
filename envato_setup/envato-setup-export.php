@@ -8,6 +8,8 @@
 // Change this to your theme folder images/stock/ path, whatever that may be.
 // The importer will look for local 'images/stock/*.jpg' files during import.
 
+// Also change the json export path near the bottom: theme/plugins/envato_setup/content/
+
 $default_content = array();
 $post_types      = array( 'attachment', 'wpcf7_contact_form', 'post', 'page' );
 foreach ( get_post_types() as $post_type ) {

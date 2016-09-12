@@ -49,6 +49,9 @@ if( ! function_exists('twentyfifteen_set_theme_setup_wizard_oauth_script') ){
 - The ajax requests happen in two queries. The first ajax query from javascript will get the "Loading" text to display (e.g. "Installing Pages") along with the URL and data to perform the actual ajax task. Javascript then executes the second ajax task to actually perform the action. And then a third ajax request to confirm it worked.
 - `envato_setup/content/` contains the default content that will be loaded during the wizard. e.g. `envato_setup/content/default.json` contains all posts and custom post types.
 - If you add `&export=true` to the URL of the first page setup wizard it will output the required json data into the `envato_setup/content/` folder, it will also put media files into a local `images/stock/` folder.
+- If you're looking to change what meta fields get exported have a look here: https://github.com/dtbaker/envato-wp-theme-setup-wizard/blob/master/envato_setup/envato-setup-export.php#L54 
+- If you need to replace post ids, urls or shortcode content that is stored in a post meta field, look at the _elementor_id_import function here: https://github.com/dtbaker/envato-wp-theme-setup-wizard/blob/master/envato_setup/envato_setup.php#L1890  
+- The `_parse_gallery_shortcode_content` function is what replaces URL's, gallery shortcode id's and contact-form-7 id's. This function is run on some meta fields as well (e.g. Elementor can store shortcodes and section content in meta fields, need to replace content in here)
 
 ## Envato Market Plugin
 The Envato Market plugin is very new. Details here: https://github.com/envato/wp-envato-market
