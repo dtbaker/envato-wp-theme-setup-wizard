@@ -47,14 +47,8 @@ if( ! function_exists('twentyfifteen_set_theme_setup_wizard_oauth_script') ){
 ```
 - `envato_setup/js/envato-setup.js` is the script which handles the "Loading Button" animation (pretty simple and cool hey?) along with processing the ajax requests for each default installation action.
 - The ajax requests happen in two queries. The first ajax query from javascript will get the "Loading" text to display (e.g. "Installing Pages") along with the URL and data to perform the actual ajax task. Javascript then executes the second ajax task to actually perform the action. And then a third ajax request to confirm it worked.
-- `envato_setup/content/` contains the default content that will be loaded during the wizard. e.g. `envato_setup/content/all.xml` is imported when the "Pages" default content is selected. This is handled in a callback like so:
-```php
-    private function _content_install_pages(){
-        return $this->_import_wordpress_xml_file(__DIR__ ."/content/all.xml");
-    }
-```
-- Adjust the data in `envato_setup/content/` to suit your theme.
-- If you add `&export=true` to the URL of the setup wizard it will output some json data which can be added to the json files in `envato_setup/content/`.
+- `envato_setup/content/` contains the default content that will be loaded during the wizard. e.g. `envato_setup/content/default.json` contains all posts and custom post types.
+- If you add `&export=true` to the URL of the first page setup wizard it will output the required json data into the `envato_setup/content/` folder, it will also put media files into a local `images/stock/` folder.
 
 ## Envato Market Plugin
 The Envato Market plugin is very new. Details here: https://github.com/envato/wp-envato-market
