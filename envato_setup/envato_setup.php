@@ -1701,6 +1701,16 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 										// add the term meta.
 										if($term_id && !empty($term['meta']) && is_array($term['meta'])){
 											foreach($term['meta'] as $meta_key => $meta_val){
+											    // we have to replace certain meta_key/meta_val
+                                                // e.g. thumbnail id from woocommerce product categories.
+                                                switch($meta_key){
+                                                    case 'thumbnail_id':
+                                                        if( $new_meta_val = $this->_imported_post_id($meta_val) ){
+                                                            // use this new id.
+                                                            $meta_val = $new_meta_val;
+                                                        }
+                                                        break;
+                                                }
 												update_term_meta( $term_id, $meta_key, $meta_val );
 											}
 										}
