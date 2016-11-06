@@ -7,7 +7,7 @@
  * @author      dtbaker
  * @author      vburlak
  * @package     envato_wizard
- * @version     1.2.4
+ * @version     1.2.6
  *
  *
  * 1.2.0 - added custom_logo
@@ -15,6 +15,7 @@
  * 1.2.2 - elementor widget data replace on import
  * 1.2.3 - auto export of content.
  * 1.2.4 - fix category menu links
+ * 1.2.5 - post meta un json decode
  *
  * Based off the WooThemes installer.
  *
@@ -39,7 +40,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 *
 		 * @var string
 		 */
-		protected $version = '1.2.4';
+		protected $version = '1.2.6';
 
 		/** @var string Current theme name, used as namespace in actions. */
 		protected $theme_name = '';
@@ -518,7 +519,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 						$this->get_header_logo_width()
 					);
 				} else { ?>
-					<img src="<?php echo $this->plugin_url; ?>images/logo.png" alt="Envato install wizard" /><?php
+						<img src="<?php echo esc_url( $this->plugin_url . 'images/logo.png' ); ?>" alt="Envato install wizard" /><?php
 				} ?></a>
 		</h1>
 		<?php
@@ -891,15 +892,6 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 
 			$content = array();
 
-			/*$content['categories'] = array(
-				'title' => esc_html__( 'Categories' ),
-				'description' => esc_html__( 'Insert default Categories as seen in the demo.' ),
-				'pending' => esc_html__( 'Pending.' ),
-				'installing' => esc_html__( 'Installing.' ),
-				'success' => esc_html__( 'Success.' ),
-				'install_callback' => array( $this,'_content_install_categories' ),
-			);*/
-
 			// find out what content is in our default json file.
 			$available_content = $this->_get_json( 'default.json' );
 			foreach ( $available_content as $post_type => $post_data ) {
@@ -922,22 +914,6 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				}
 			}
 
-			/*$content['pages'] = array(
-				'title' => esc_html__( 'Pages' ),
-				'description' => esc_html__( 'This will create default pages as seen in the demo.' ),
-				'pending' => esc_html__( 'Pending.' ),
-				'installing' => esc_html__( 'Installing Default Pages.' ),
-				'success' => esc_html__( 'Success.' ),
-				'install_callback' => array( $this,'_content_install_pages' ),
-			);
-			$content['products'] = array(
-				'title' => esc_html__( 'Products' ),
-				'description' => esc_html__( 'Insert default shop products and categories as seen in the demo.' ),
-				'pending' => esc_html__( 'Pending.' ),
-				'installing' => esc_html__( 'Installing Default Products.' ),
-				'success' => esc_html__( 'Success.' ),
-				'install_callback' => array( $this,'_content_install_products' ),
-			);*/
 			$content['widgets'] = array(
 				'title'            => esc_html__( 'Widgets' ),
 				'description'      => esc_html__( 'Insert default sidebar widgets as seen in the demo.' ),
@@ -948,14 +924,6 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				'checked'          => $this->is_possible_upgrade() ? 0 : 1,
 				// dont check if already have content installed.
 			);
-			/*$content['menu'] = array(
-				'title' => esc_html__( 'Menu' ),
-				'description' => esc_html__( 'Insert default menu as seen in the demo.' ),
-				'pending' => esc_html__( 'Pending.' ),
-				'installing' => esc_html__( 'Installing Default Menu.' ),
-				'success' => esc_html__( 'Success.' ),
-				'install_callback' => array( $this,'_content_install_menu' ),
-			);*/
 			$content['settings'] = array(
 				'title'            => esc_html__( 'Settings' ),
 				'description'      => esc_html__( 'Configure default settings.' ),
@@ -1004,10 +972,10 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 								       value="1" <?php echo ( ! isset( $default['checked'] ) || $default['checked'] ) ? ' checked' : ''; ?>>
 							</td>
 							<td><label
-									for="default_content_<?php echo esc_attr( $slug ); ?>"><?php echo $default['title']; ?></label>
+									for="default_content_<?php echo esc_attr( $slug ); ?>"><?php echo esc_html( $default['title'] ); ?></label>
 							</td>
-							<td class="description"><?php echo $default['description']; ?></td>
-							<td class="status"><span><?php echo $default['pending']; ?></span>
+							<td class="description"><?php echo esc_html( $default['description'] ); ?></td>
+							<td class="status"><span><?php echo esc_html( $default['pending'] ); ?></span>
 								<div class="spinner"></div>
 							</td>
 						</tr>
@@ -1165,43 +1133,6 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 
 		}
 
-		/*private function _content_install_categories(){
-			$all_data = $this->_get_json('categories.json');
-			foreach($all_data as $data_id => $cat) {
-
-				$term_id = term_exists( $cat['category_nicename'], 'category' );
-				if ( $term_id ) {
-					if ( is_array( $term_id ) ) { $term_id = $term_id['term_id']; }
-					if ( isset( $cat['term_id'] ) ) {
-						$this->_imported_term_id( intval( $cat['term_id'] ), (int) $term_id );
-					}
-					continue;
-				}
-				if(!empty( $cat['category_parent'] )){
-					// see if we have imported this yet?
-					$cat['category_parent'] = $this->_imported_term_id($cat['category_parent']);
-				}
-
-				$category_parent      = empty( $cat['category_parent'] ) ? 0 : $cat['category_parent']; //category_exists( $cat['category_parent'] );
-				$category_description = isset( $cat['category_description'] ) ? $cat['category_description'] : '';
-				$catarr               = array(
-					'category_nicename'    => $cat['category_nicename'],
-					'category_parent'      => $category_parent,
-					'cat_name'             => $cat['cat_name'],
-					'category_description' => $category_description,
-				);
-
-				$id = wp_insert_category( $catarr );
-				if ( ! is_wp_error( $id ) ) {
-					if ( isset( $cat['term_id'] ) ) {
-						$this->_imported_term_id( intval( $cat['term_id'] ), $id );
-					}
-				}
-			}
-
-			return true;
-
-		}*/
 
 
 		private function _imported_post_id( $original_id = false, $new_id = false ) {
@@ -1358,40 +1289,8 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 						return true;
 					}
 				}
-
-				/*$post_exists = post_exists( $post_data['post_title'] ); //, '', $post_data['post_date_gmt'] );
-				if ( $post_exists && get_post_type( $post_exists ) == $post_type ) {
-					$existing_post = get_post( $post_exists );
-					if ( ! empty( $post_data['post_title'] ) || ( empty( $post_data['post_title'] ) && $existing_post->post_name == $post_data['post_name'] ) ) {
-						// this is the same.
-						$this->_imported_post_id( $post_data['post_id'], $post_exists );
-
-						//                  echo $post_data['post_id'] . " title " . $post_data['post_title'] . " already exists 1: $post_exists\n";
-						return true;
-					}
-				}*/
 			}
-			/*$date2 = get_date_from_gmt($post_data['post_date_gmt']);
-			$post_exists = post_exists( $post_data['post_title'], '', $date2 );
-			if ( $post_exists && get_post_type( $post_exists ) == $post_type ) {
-				$existing_post = get_post($post_exists);
-				if(!empty($post_data['post_title']) || (empty($post_data['post_title']) && $existing_post->post_name == $post_data['post_name'])) {
-					$this->_imported_post_id( $post_data['post_id'], $post_exists );
-			//                  echo $post_data['post_id'] . " already exists 2\n";
-					return true;
-				}
-			}
-			if(!empty($post_data['post_date'])) {
-				$post_exists = post_exists( $post_data['post_title'], '', $post_data['post_date'] );
-				if ( $post_exists && get_post_type( $post_exists ) == $post_type ) {
-					$existing_post = get_post($post_exists);
-					if(!empty($post_data['post_title']) || (empty($post_data['post_title']) && $existing_post->post_name == $post_data['post_name'])) {
-						$this->_imported_post_id( $post_data['post_id'], $post_exists );
-			//                      echo $post_data['post_id'] . " already exists 3\n";
-						return true;
-					}
-				}
-			}*/
+
 			switch ( $post_type ) {
 				case 'attachment':
 					// import media via url
@@ -1480,6 +1379,17 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 					if ( ! empty( $post_data['meta'] ) && is_array( $post_data['meta'] ) ) {
 
 						// replace any elementor post data:
+
+						// fix for double json encoded stuff:
+						foreach ( $post_data['meta'] as $meta_key => $meta_val ) {
+							if ( is_string( $meta_val ) && strlen( $meta_val ) && $meta_val[0] == '[' ) {
+								$test_json = @json_decode( $meta_val, true );
+								if ( is_array( $test_json ) ) {
+									$post_data['meta'][ $meta_key ] = $test_json;
+								}
+							}
+						}
+
 						array_walk_recursive( $post_data['meta'], array( $this, '_elementor_id_import' ) );
 
 						// replace menu data:
@@ -1694,7 +1604,6 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 								} else {
 									$this->error( 'Unable to find POST replacement for ' . $replace_key . '="' . $matches[1][ $match_id ] . '" in content.' );
 									if ( $delayed ) {
-										//                                      echo "Failed, already delayed ".$post_data['post_id']."\n\n";
 										// already delayed, unable to find this meta value, insert it anyway.
 
 									} else {
@@ -1721,7 +1630,6 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 								} else {
 									$this->error( 'Unable to find TAXONOMY replacement for ' . $replace_key . '="' . $matches[1][ $match_id ] . '" in content.' );
 									if ( $delayed ) {
-										//                                      echo "Failed, already delayed ".$post_data['post_id']."\n\n";
 										// already delayed, unable to find this meta value, insert it anyway.
 									} else {
 										//                                      echo "Delaying post id ".$post_data['post_id']."... \n\n";
@@ -1738,36 +1646,11 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 
 
 					$post_id = wp_insert_post( $post_data, true );
-					//                  echo "Processing ".$post_data['post_id']." \n\n";
 					if ( ! is_wp_error( $post_id ) ) {
 						$this->_imported_post_id( $post_data['post_id'], $post_id );
 						// add/update post meta
 						if ( ! empty( $post_data['meta'] ) ) {
 							foreach ( $post_data['meta'] as $meta_key => $meta_val ) {
-
-								// export gets meta straight from the DB so could have a serialized string
-								/*$meta_val = maybe_unserialize( $meta_val );
-
-								if ( is_array( $meta_val ) && count( $meta_val ) == 1 ) { // not sure this isset will fix the bug.
-									reset($meta_val);
-									$test = maybe_unserialize(current( $meta_val ));
-									if($debug){
-										echo "Adding meta key2: $meta_key \n";
-										print_r($test);
-									}
-
-									if(is_array($test)) {
-										$meta_val = array($test);
-									}else{
-										$meta_val = current( $meta_val );
-									}
-								}
-								$meta_val_unserialized = maybe_unserialize($meta_val);
-								$serialized_meta = false;
-								if(is_array($meta_val_unserialized)){
-									$serialized_meta = true; // so we can re-serialize it later
-									$meta_val = $meta_val_unserialized;
-								}*/
 
 								// if the post has a featured image, take note of this in case of remap
 								if ( '_thumbnail_id' == $meta_key ) {
@@ -1787,7 +1670,6 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 							$terms_to_set = array();
 							foreach ( $post_data['terms'] as $term_slug => $terms ) {
 								foreach ( $terms as $term ) {
-									//									echo "Adding category;";print_r($term);echo "\n\n";
 									/*"term_id": 21,
 									"name": "Tea",
 									"slug": "tea",
@@ -1810,13 +1692,18 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 											$t = wp_insert_term( $term['name'], $taxonomy, $term );
 											if ( ! is_wp_error( $t ) ) {
 												$term_id = $t['term_id'];
-												//do_action( 'wp_import_insert_term', $t, $term, $post_id, $post );
 											} else {
 												// todo - error
 												continue;
 											}
 										}
 										$this->_imported_term_id( $term['term_id'], $term_id );
+										// add the term meta.
+										if($term_id && !empty($term['meta']) && is_array($term['meta'])){
+											foreach($term['meta'] as $meta_key => $meta_val){
+												update_term_meta( $term_id, $meta_key, $meta_val );
+											}
+										}
 										$terms_to_set[ $taxonomy ][] = intval( $term_id );
 									}
 								}
@@ -1897,7 +1784,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			}
 			if ( $key == 'page' && ! empty( $item ) ) {
 
-				if( false !== strpos( $item, "p." ) ){
+				if ( false !== strpos( $item, 'p.' ) ) {
 					$new_id = str_replace('p.', '', $item);
 					// check if this has been imported before
 					$new_meta_val = $this->_imported_post_id( $new_id );
@@ -2003,7 +1890,6 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			for ( $x = 1; $x < 4; $x ++ ) {
 				foreach ( $this->delay_posts as $delayed_post_type => $delayed_post_datas ) {
 					foreach ( $delayed_post_datas as $delayed_post_id => $delayed_post_data ) {
-						//echo "Processing delayed post $delayed_post_type id ".$delayed_post_data['post_id']."\n\n";
 						if ( $this->_imported_post_id( $delayed_post_data['post_id'] ) ) {
 							$this->log( $x . ' - Successfully processed ' . $delayed_post_type . ' ID ' . $delayed_post_data['post_id'] . ' previously.' );
 							unset( $this->delay_posts[ $delayed_post_type ][ $delayed_post_id ] );
@@ -2107,7 +1993,6 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				$widget_positions = array();
 			}
 
-			//                    echo '<pre>'; print_r($import_widget_positions); print_r($import_widget_options); print_r($my_options); echo '</pre>';exit;
 			foreach ( $import_widget_options as $widget_name => $widget_options ) {
 				// replace certain elements with updated imported entries.
 				foreach ( $widget_options as $widget_option_id => $widget_option ) {
@@ -2119,7 +2004,6 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 							$new_id = $this->_imported_term_id( $widget_option[ $key_to_replace ] );
 							if ( ! $new_id ) {
 								// do we really clear this out? nah. well. maybe.. hmm.
-								//unset( $widget_options[ $widget_option_id ] );
 							} else {
 								$widget_options[ $widget_option_id ][ $key_to_replace ] = $new_id;
 							}
@@ -2132,7 +2016,6 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 							$new_id = $this->_imported_post_id( $widget_option[ $key_to_replace ] );
 							if ( ! $new_id ) {
 								// do we really clear this out? nah. well. maybe.. hmm.
-								//unset( $widget_options[ $widget_option_id ] );
 							} else {
 								$widget_options[ $widget_option_id ][ $key_to_replace ] = $new_id;
 							}
@@ -2144,13 +2027,9 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 					$existing_options = array();
 				}
 				$new_options = $existing_options + $widget_options;
-				//                        echo $widget_name;
-				//                        print_r($new_options);
 				update_option( 'widget_' . $widget_name, $new_options );
 			}
 			update_option( 'sidebars_widgets', array_merge( $widget_positions, $import_widget_positions ) );
-
-			//                    print_r($widget_positions + $import_widget_positions);exit;
 
 			return true;
 
@@ -2174,6 +2053,12 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 					if ( $new_page_id ) {
 						// we have a new page id for this one. import the new setting value.
 						$option = str_replace( $matches[1] . $matches[2] . '_', $matches[1] . $new_page_id . '_', $option );
+					}
+				}
+				if ( $value && ! empty( $value['custom_logo'] ) ) {
+					$new_logo_id = $this->_imported_post_id( $value['custom_logo'] );
+					if ( $new_logo_id ) {
+						$value['custom_logo'] = $new_logo_id;
 					}
 				}
 				if ( $option == 'dtbaker_featured_images' ) {
@@ -2241,7 +2126,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			return true;
 		}
 
-		private function _get_json( $file ) {
+		public function _get_json( $file ) {
 			if ( is_file( __DIR__ . '/content/' . basename( $file ) ) ) {
 				WP_Filesystem();
 				global $wp_filesystem;
@@ -2380,7 +2265,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 					// we have a width and height for this image. awesome.
 					$logo_width  = (int) get_theme_mod( 'logo_header_image_width', '467' );
 					$scale       = $logo_width / $attr[1];
-					$logo_height = $attr[2] * $scale;
+					$logo_height = intval( $attr[2] * $scale );
 					if ( $logo_height > 0 ) {
 						set_theme_mod( 'logo_header_image_height', $logo_height );
 					}
@@ -2414,7 +2299,6 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 					<?php
 					$option = envato_market()->get_options();
 
-					//echo '<pre>';print_r($option);echo '</pre>';
 					$my_items = array();
 					if ( $option && ! empty( $option['items'] ) ) {
 						foreach ( $option['items'] as $item ) {

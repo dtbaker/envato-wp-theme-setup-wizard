@@ -108,13 +108,20 @@ foreach ( $post_types as $post_type ) {
 		$terms = array();
 		foreach ( $taxonomies as $taxonomy ) {
 			$terms[ $taxonomy ] = wp_get_post_terms( $post_data->ID, $taxonomy, array( 'fields' => 'all' ) );
-			/*if($terms[$taxonomy]){
+			if($terms[$taxonomy]){
 				foreach($terms[$taxonomy] as $tax_id => $tax){
 					if(!empty($tax->term_id)) {
 						$terms[ $taxonomy ][ $tax_id ] -> meta = get_term_meta( $tax->term_id );
+						if(!empty($terms[ $taxonomy ][ $tax_id ] -> meta)){
+							foreach($terms[ $taxonomy ][ $tax_id ] -> meta as $key=>$val){
+								if(is_array($val) && count($val) == 1 && isset($val[0])){
+									$terms[ $taxonomy ][ $tax_id ] -> meta[$key] = $val[0];
+								}
+							}
+						}
 					}
 				}
-			}*/
+			}
 		}
 		$default_content[ $post_type ][] = array(
 			'type_title'     => $type_title,
@@ -192,16 +199,25 @@ foreach ( $all_options as $name => $value ) {
 $my_options['dbem_credits']                        = 0;
 $my_options['woocommerce_cart_redirect_after_add'] = 'yes';
 $my_options['woocommerce_enable_ajax_add_to_cart'] = 'no';
-$my_options['travel_settings']                     = array( 'api_key' => 'AIzaSyBsnYWO4SSibatp0SjsU9D2aZ6urI-_cJ8' );
-$my_options['tt-font-google-api-key']              = 'AIzaSyBsnYWO4SSibatp0SjsU9D2aZ6urI-_cJ8';
+//$my_options['travel_settings']                     = array( 'api_key' => 'AIzaSyBsnYWO4SSibatp0SjsU9D2aZ6urI-_cJ8' );
+//$my_options['tt-font-google-api-key']              = 'AIzaSyBsnYWO4SSibatp0SjsU9D2aZ6urI-_cJ8';
 $my_options                                        = $this->filter_options( $my_options );
 
-if ( is_dir( get_home_path() . '/../theme/plugins/envato_setup/content/' ) ) {
-	file_put_contents( get_home_path() . '/../theme/plugins/envato_setup/content/default.json' , json_encode( $default_content ) );
-	file_put_contents( get_home_path() . '/../theme/plugins/envato_setup/content/widget_positions.json' , json_encode( $widget_positions ) );
-	file_put_contents( get_home_path() . '/../theme/plugins/envato_setup/content/widget_options.json' , json_encode( $widget_options ) );
-	file_put_contents( get_home_path() . '/../theme/plugins/envato_setup/content/menu.json' , json_encode( $menu_ids ) );
-	file_put_contents( get_home_path() . '/../theme/plugins/envato_setup/content/options.json' , json_encode( $my_options ) );
+$dir = get_home_path() . '/../theme/plugins/envato_setup/content/';
+
+if ( is_dir( $dir ) ) {
+
+	if ( ! empty( $_COOKIE[ md5( ABSPATH ).'subsite' ] ) ) {
+		$dir = $dir . $_COOKIE[ md5( ABSPATH ).'subsite' ].'/';
+		if ( ! is_dir( $dir ) ) {
+			mkdir( $dir );
+		}
+	}
+	file_put_contents( $dir . 'default.json' , json_encode( $default_content ) );
+	file_put_contents( $dir . 'widget_positions.json' , json_encode( $widget_positions ) );
+	file_put_contents( $dir . 'widget_options.json' , json_encode( $widget_options ) );
+	file_put_contents( $dir . 'menu.json' , json_encode( $menu_ids ) );
+	file_put_contents( $dir . 'options.json' , json_encode( $my_options ) );
 }
 
 ?>
