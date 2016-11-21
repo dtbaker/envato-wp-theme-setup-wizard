@@ -55,6 +55,8 @@ if( ! function_exists('twentyfifteen_set_theme_setup_wizard_oauth_script') ){
 
 ## Site Styles
 
+[![ScreenShot](https://i.imgur.com/GtdPKrW.png)](https://i.imgur.com/GtdPKrW.png)
+
 You can setup multiple styles for your site. This lets you export different content/images/options/posts/etc.. and the user can pick which one they want during the setup wizard.
 
 The installer reads the `dtbwp_site_style` theme mod value like this:
