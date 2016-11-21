@@ -419,7 +419,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				'handler' => '',
 			);
 			$this->steps['design']          = array(
-				'name'    => esc_html__( 'Logo & Design' ),
+				'name'    => esc_html__( 'Logo' ),
 				'view'    => array( $this, 'envato_setup_logo_design' ),
 				'handler' => array( $this, 'envato_setup_logo_design_save' ),
 			);
