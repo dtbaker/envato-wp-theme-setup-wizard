@@ -7,7 +7,7 @@
  * @author      dtbaker
  * @author      vburlak
  * @package     envato_wizard
- * @version     1.2.6
+ * @version     1.2.7
  *
  *
  * 1.2.0 - added custom_logo
@@ -16,6 +16,8 @@
  * 1.2.3 - auto export of content.
  * 1.2.4 - fix category menu links
  * 1.2.5 - post meta un json decode
+ * 1.2.6 - post meta un json decode
+ * 1.2.7 - elementor generate css on import
  *
  * Based off the WooThemes installer.
  *
@@ -123,6 +125,11 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 */
 		protected $page_url;
 
+		/**
+		 * @since 1.1.8
+		 *
+		 */
+		public $site_styles = array();
 
 		/**
 		 * Holds the current instance of the theme manager
@@ -144,6 +151,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 
 			return self::$instance;
 		}
+
 
 		/**
 		 * A dummy constructor to prevent this class from being loaded more than once.
@@ -167,7 +175,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 * @access public
 		 */
 		public function get_default_theme_style() {
-			return 'pink';
+			return 'style1';
 		}
 
 		/**
@@ -197,7 +205,8 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				$logo_image_object = wp_get_attachment_image_src( $logo_image_id, 'full' );
 				$image_url         = $logo_image_object[0];
 			} else {
-				$image_url = get_theme_mod( 'logo_header_image', get_template_directory_uri() . '/images/' . get_theme_mod( 'dtbwp_site_color', $this->get_default_theme_style() ) . '/logo.png' );
+
+				$image_url = get_theme_mod( 'logo_header_image',$this->plugin_url . 'images/' . get_theme_mod( 'dtbwp_site_style', $this->get_default_theme_style() ) . '/logo.png' );
 			}
 
 			return apply_filters( 'envato_setup_logo_image', $image_url );
@@ -216,6 +225,12 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			$this->oauth_script    = apply_filters( $this->theme_name . '_theme_setup_wizard_oauth_script', 'http://dtbaker.net/files/envato/wptoken/server-script.php' );
 			$this->page_slug       = apply_filters( $this->theme_name . '_theme_setup_wizard_page_slug', $this->theme_name . '-setup' );
 			$this->parent_slug     = apply_filters( $this->theme_name . '_theme_setup_wizard_parent_slug', '' );
+
+			// create an images/styleX/ folder for each style here.
+			$this->site_styles = array(
+                'style1' => 'Style 1',
+                'style2' => 'Style 2',
+            );
 
 			//If we have parent slug - set correct url
 			if ( $this->parent_slug !== '' ) {
@@ -391,6 +406,13 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				'view'    => array( $this, 'envato_setup_updates' ),
 				'handler' => array( $this, 'envato_setup_updates_save' ),
 			);
+			if( count($this->site_styles) > 1 ) {
+				$this->steps['style'] = array(
+					'name'    => esc_html__( 'Style' ),
+					'view'    => array( $this, 'envato_setup_color_style' ),
+					'handler' => array( $this, 'envato_setup_color_style_save' ),
+				);
+			}
 			$this->steps['default_content'] = array(
 				'name'    => esc_html__( 'Content' ),
 				'view'    => array( $this, 'envato_setup_default_content' ),
@@ -679,6 +701,8 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 
 				// clear font options
 				update_option( 'tt_font_theme_options', array() );
+
+				// do other reset options here.
 
 				// reset site color
 				remove_theme_mod( 'dtbwp_site_color' );
@@ -1129,6 +1153,17 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 						$post_admin->setSettings( $vc_post_id );
 					}
 				}
+			}
+
+		}
+
+
+		public function elementor_post( $post_id = false ) {
+
+			// regenrate the CSS for this Elementor post
+			if( class_exists( 'Elementor\Post_CSS_File' ) ) {
+                $post_css = new Elementor\Post_CSS_File($post_id);
+				$post_css->update();
 			}
 
 		}
@@ -1727,6 +1762,9 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 						if ( strpos( $post_data['post_content'], '[vc_' ) !== false ) {
 							$this->vc_post( $post_id );
 						}
+						if ( !empty($post_data['meta']['_elementor_data']) || !!empty($post_data['meta']['_elementor_css']) ) {
+							$this->elementor_post( $post_id );
+						}
 					}
 
 					break;
@@ -2137,6 +2175,17 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		}
 
 		public function _get_json( $file ) {
+
+			$theme_style = __DIR__ . '/content/' . basename(get_theme_mod('dtbwp_site_style',$this->get_default_theme_style())) .'/';
+			if ( is_file( $theme_style . basename( $file ) ) ) {
+				WP_Filesystem();
+				global $wp_filesystem;
+				$file_name = $theme_style . basename( $file );
+				if ( file_exists( $file_name ) ) {
+					return json_decode( $wp_filesystem->get_contents( $file_name ), true );
+				}
+			}
+            // backwards compat:
 			if ( is_file( __DIR__ . '/content/' . basename( $file ) ) ) {
 				WP_Filesystem();
 				global $wp_filesystem;
@@ -2175,13 +2224,72 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			$this->logs[] = 'ERROR!!!! ' . $message;
 		}
 
+		public function envato_setup_color_style() {
+
+			?>
+            <h1><?php esc_html_e( 'Site Style' ); ?></h1>
+            <form method="post">
+                <p><?php esc_html_e( 'Please choose your site style below.' ); ?></p>
+
+                <div class="theme-presets">
+                    <ul>
+	                    <?php
+	                    $current_style = get_theme_mod( 'dtbwp_site_style', $this->get_default_theme_style() );
+	                    foreach ( $this->site_styles as $style_name => $style_data ) {
+		                    ?>
+                            <li<?php echo $style_name == $current_style ? ' class="current" ' : ''; ?>>
+                                <a href="#" data-style="<?php echo esc_attr( $style_name ); ?>"><img
+                                            src="<?php echo esc_url(get_template_directory_uri() .'/plugins/envato_setup/images/'.$style_name.'/style.jpg');?>"></a>
+                            </li>
+	                    <?php } ?>
+                    </ul>
+                </div>
+
+                <input type="hidden" name="new_style" id="new_style" value="">
+
+                <p><em>Please Note: Advanced changes to website graphics/colors may require extensive PhotoShop and Web
+                        Development knowledge. We recommend hiring an expert from <a
+                                href="http://studiotracking.envato.com/aff_c?offer_id=4&aff_id=1564&source=DemoInstall"
+                                target="_blank">Envato Studio</a> to assist with any advanced website changes.</em></p>
+                <div style="display: none;">
+                    <img src="http://studiotracking.envato.com/aff_i?offer_id=4&aff_id=1564&source=DemoInstall"
+                         width="1" height="1"/>
+                </div>
+
+                <p class="envato-setup-actions step">
+                    <input type="submit" class="button-primary button button-large button-next"
+                           value="<?php esc_attr_e( 'Continue' ); ?>" name="save_step"/>
+                    <a href="<?php echo esc_url( $this->get_next_step_link() ); ?>"
+                       class="button button-large button-next"><?php esc_html_e( 'Skip this step' ); ?></a>
+					<?php wp_nonce_field( 'envato-setup' ); ?>
+                </p>
+            </form>
+			<?php
+		}
+
+		/**
+		 * Save logo & design options
+		 */
+		public function envato_setup_color_style_save() {
+			check_admin_referer( 'envato-setup' );
+
+			$new_style = isset( $_POST['new_style'] ) ? $_POST['new_style'] : false;
+			if ( $new_style ) {
+				set_theme_mod( 'dtbwp_site_style', $new_style );
+			}
+
+			wp_redirect( esc_url_raw( $this->get_next_step_link() ) );
+			exit;
+		}
+
+
 		/**
 		 * Logo & Design
 		 */
 		public function envato_setup_logo_design() {
 
 			?>
-			<h1><?php esc_html_e( 'Logo &amp; Design' ); ?></h1>
+			<h1><?php esc_html_e( 'Logo' ); ?></h1>
 			<form method="post">
 				<p><?php printf( esc_html__( 'Please add your logo below. For best results, the logo should be a transparent PNG ( 466 by 277 pixels). The logo can be changed at any time from the Appearance > Customize area in your dashboard. Try %sEnvato Studio%s if you need a new logo designed.' ), '<a href="http://studiotracking.envato.com/aff_c?offer_id=4&aff_id=1564&source=DemoInstall" target="_blank">', '</a>' ); ?></p>
 
@@ -2208,30 +2316,6 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 					</tr>
 				</table>
 
-				<?php
-				$demo_styles = apply_filters( 'dtbwp_default_styles', array() );
-				if ( ! $this->get_default_theme_style() || count( $demo_styles ) <= 1 ) {
-
-				} else {
-					?>
-
-					<p><?php esc_html_e( 'Please choose the color scheme for this website. The color scheme (along with font colors &amp; styles) can be changed at any time from the Appearance > Customize area in your dashboard.' ); ?></p>
-
-					<div class="theme-presets">
-						<ul>
-							<?php
-							$current_demo = get_theme_mod( 'dtbwp_site_color', $this->get_default_theme_style() );
-							foreach ( $demo_styles as $demo_name => $demo_style ) {
-								?>
-								<li<?php echo $demo_name == $current_demo ? ' class="current" ' : ''; ?>>
-									<a href="#" data-style="<?php echo esc_attr( $demo_name ); ?>"><img
-											src="<?php echo esc_url( $demo_style['image'] ); ?>"></a>
-								</li>
-							<?php } ?>
-						</ul>
-					</div>
-				<?php } ?>
-
 				<p><em>Please Note: Advanced changes to website graphics/colors may require extensive PhotoShop and Web
 						Development knowledge. We recommend hiring an expert from <a
 							href="http://studiotracking.envato.com/aff_c?offer_id=4&aff_id=1564&source=DemoInstall"
@@ -2241,9 +2325,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 					     width="1" height="1"/>
 				</div>
 
-
 				<input type="hidden" name="new_logo_id" id="new_logo_id" value="">
-				<input type="hidden" name="new_style" id="new_style" value="">
 
 				<p class="envato-setup-actions step">
 					<input type="submit" class="button-primary button button-large button-next"
@@ -2282,7 +2364,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				}
 			}
 
-			$new_style = isset( $_POST['new_style'] ) ? $_POST['new_style'] : false;
+			$new_style = isset( $_POST['new_site_color'] ) ? $_POST['new_site_color'] : false;
 			if ( $new_style ) {
 				$demo_styles = apply_filters( 'dtbwp_default_styles', array() );
 				if ( isset( $demo_styles[ $new_style ] ) ) {

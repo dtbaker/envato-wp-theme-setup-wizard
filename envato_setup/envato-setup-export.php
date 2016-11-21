@@ -207,12 +207,12 @@ $dir = get_home_path() . '/../theme/plugins/envato_setup/content/';
 
 if ( is_dir( $dir ) ) {
 
-	if ( ! empty( $_COOKIE[ md5( ABSPATH ).'subsite' ] ) ) {
-		$dir = $dir . $_COOKIE[ md5( ABSPATH ).'subsite' ].'/';
-		if ( ! is_dir( $dir ) ) {
-			mkdir( $dir );
-		}
-	}
+	// which style are we writing to?
+    $stylefolder = basename(get_theme_mod('dtbwp_site_style',$this->get_default_theme_style()));
+    if($stylefolder){
+	    $dir .= $stylefolder .'/';
+    }
+
 	file_put_contents( $dir . 'default.json' , json_encode( $default_content ) );
 	file_put_contents( $dir . 'widget_positions.json' , json_encode( $widget_positions ) );
 	file_put_contents( $dir . 'widget_options.json' , json_encode( $widget_options ) );

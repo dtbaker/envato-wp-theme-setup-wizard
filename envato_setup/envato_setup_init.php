@@ -9,10 +9,10 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 
-add_filter('envato_setup_logo_image','dtbwp_envato_setup_logo_image');
-function dtbwp_envato_setup_logo_image($old_image_url){
-	return get_template_directory_uri().'/images/logo.png';
-}
+//add_filter('envato_setup_logo_image','dtbwp_envato_setup_logo_image');
+//function dtbwp_envato_setup_logo_image($old_image_url){
+//	return get_template_directory_uri().'/images/logo.png';
+//}
 
 if ( ! function_exists( 'envato_theme_setup_wizard' ) ) :
 	function envato_theme_setup_wizard() {
@@ -72,10 +72,6 @@ if ( ! function_exists( 'envato_theme_setup_wizard' ) ) :
 						));
 					}
 					return $content;
-				}
-
-				public function get_default_theme_style(){
-					return false;
 				}
 
 				public function is_possible_upgrade(){

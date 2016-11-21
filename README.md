@@ -53,6 +53,28 @@ if( ! function_exists('twentyfifteen_set_theme_setup_wizard_oauth_script') ){
 - If you need to replace post ids, urls or shortcode content that is stored in a post meta field, look at the _elementor_id_import function here: https://github.com/dtbaker/envato-wp-theme-setup-wizard/blob/master/envato_setup/envato_setup.php#L1890  
 - The `_parse_gallery_shortcode_content` function is what replaces URL's, gallery shortcode id's and contact-form-7 id's. This function is run on some meta fields as well (e.g. Elementor can store shortcodes and section content in meta fields, need to replace content in here)
 
+## Site Styles
+
+You can setup multiple styles for your site. This lets you export different content/images/options/posts/etc.. and the user can pick which one they want during the setup wizard.
+
+The installer reads the `dtbwp_site_style` theme mod value like this:
+ 
+```
+get_theme_mod( 'dtbwp_site_style', $this->get_default_theme_style() );
+```
+
+Change the available styles in envato_setup.php here:
+```
+$this->site_styles = array(
+    'style1' => 'Style 1',
+    'style2' => 'Style 2',
+);
+```
+If you only have 1 style you can set this to an empty array.
+
+Place the logo/thumbnail for each style into the `envato_setup/images/styleX/` folders. 
+
+
 ## Envato Market Plugin
 The Envato Market plugin is very new. Details here: https://github.com/envato/wp-envato-market
 By default the Envato Market plugin requires users generate a personal token for the API. This can be time consuming and confusing for first time buyers.
