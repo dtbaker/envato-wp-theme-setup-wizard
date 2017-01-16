@@ -7,7 +7,7 @@
  * @author      dtbaker
  * @author      vburlak
  * @package     envato_wizard
- * @version     1.2.7
+ * @version     1.3.0
  *
  *
  * 1.2.0 - added custom_logo
@@ -18,6 +18,9 @@
  * 1.2.5 - post meta un json decode
  * 1.2.6 - post meta un json decode
  * 1.2.7 - elementor generate css on import
+ * 1.2.8 - backwards compat with old meta format
+ * 1.2.9 - theme setup auth
+ * 1.3.0 - ob_start fix
  *
  * Based off the WooThemes installer.
  *
@@ -42,7 +45,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 *
 		 * @var string
 		 */
-		protected $version = '1.2.6';
+		protected $version = '1.3.0';
 
 		/** @var string Current theme name, used as namespace in actions. */
 		protected $theme_name = '';
@@ -205,8 +208,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				$logo_image_object = wp_get_attachment_image_src( $logo_image_id, 'full' );
 				$image_url         = $logo_image_object[0];
 			} else {
-
-				$image_url = get_theme_mod( 'logo_header_image',$this->plugin_url . 'images/' . get_theme_mod( 'dtbwp_site_style', $this->get_default_theme_style() ) . '/logo.png' );
+				$image_url = get_theme_mod( 'logo_header_image', get_template_directory_uri() . '/images/' . get_theme_mod( 'dtbwp_site_color', $this->get_default_theme_style() ) . '/logo.png' );
 			}
 
 			return apply_filters( 'envato_setup_logo_image', $image_url );
@@ -276,6 +278,8 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			if ( function_exists( 'envato_market' ) ) {
 				add_action( 'admin_init', array( $this, 'envato_market_admin_init' ), 20 );
 				add_filter( 'http_request_args', array( $this, 'envato_market_http_request_args' ), 10, 2 );
+				add_action( 'wp_ajax_dtbwp_update_notice_handler', array($this,'ajax_notice_handler') );
+				add_action( 'admin_notices', array($this,'admin_theme_auth_notice') );
 			}
 			add_action( 'upgrader_post_install', array( $this, 'upgrader_post_install' ), 10, 2 );
 		}
@@ -320,7 +324,6 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		}
 
 		public function admin_redirects() {
-			ob_start();
 			if ( ! get_transient( '_' . $this->theme_name . '_activation_redirect' ) || get_option( 'envato_setup_complete', false ) ) {
 				return;
 			}
@@ -621,7 +624,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 					foreach ( $all_data[ $post_type ] as $post_data ) {
 
 						if ( $post_data['post_id'] == $post_id ) {
-							print_r( $post_data );
+							//print_r( $post_data );
 							$this->_process_post_data( $post_type, $post_data, 0, true );
 						}
 					}
@@ -632,7 +635,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 				echo '</pre>';
 			} else if ( isset( $_REQUEST['export'] ) ) {
 
-				@include('envato-setup-export.php');
+				@include( 'envato-setup-export.php' );
 
 			} else if ( $this->is_possible_upgrade() ) {
 				?>
@@ -1322,6 +1325,18 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 						$this->_imported_post_id( $post_data['post_id'], $foundid );
 
 						return true;
+					}
+				}
+			}
+
+			// backwards compat with old import format.
+			if ( isset( $post_data['meta'] ) ) {
+				foreach ( $post_data['meta'] as $key => $meta ) {
+					if(is_array($meta) && count($meta) == 1){
+						$single_meta = current($meta);
+						if(!is_array($single_meta)){
+							$post_data['meta'][$key] = $single_meta;
+						}
 					}
 				}
 			}
@@ -2534,6 +2549,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		public function envato_setup_ready() {
 
 			update_option( 'envato_setup_complete', time() );
+			update_option( 'dtbwp_update_notice', strtotime('-4 days') );
 			?>
 			<a href="https://twitter.com/share" class="twitter-share-button"
 			   data-url="http://themeforest.net/user/dtbaker/portfolio?ref=dtbaker"
@@ -2606,6 +2622,13 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			$option         = get_option( 'envato_setup_wizard', array() );
 			$envato_options = envato_market()->get_options();
 			$envato_options = $this->_array_merge_recursive_distinct( $envato_options, $option );
+			if(!empty($envato_options['items'])) {
+				foreach($envato_options['items'] as $key => $item) {
+					if(!empty($item['id']) && is_string($item['id'])) {
+						$envato_options['items'][$key]['id'] = (int)$item['id'];
+					}
+				}
+			}
 			update_option( envato_market()->get_option_name(), $envato_options );
 
 			//add_thickbox();
@@ -2717,13 +2740,17 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 					);
 					if ( is_wp_error( $response ) ) {
 						$error_message = $response->get_error_message();
-						echo "Something went wrong while trying to retrieve oauth token: $error_message";
+						// we clear any stored tokens which prompts the user to re-auth with the update server.
+                        $this->_clear_oauth();
 					} else {
 						$new_token = @json_decode( wp_remote_retrieve_body( $response ), true );
 						$result    = false;
 						if ( is_array( $new_token ) && ! empty( $new_token['new_token'] ) ) {
 							$token['access_token'] = $new_token['new_token'];
 							$token['expires']      = time() + 3600;
+						}else {
+							//refresh failed, we clear any stored tokens which prompts the user to re-register.
+                            $this->_clear_oauth();
 						}
 					}
 				}
@@ -2787,6 +2814,67 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			}
 		}
 
+		public function _clear_oauth() {
+			$envato_options = envato_market()->get_options();
+			unset( $envato_options['oauth'] );
+			update_option( envato_market()->get_option_name(), $envato_options );
+		}
+
+
+
+		public function ajax_notice_handler() {
+			check_ajax_referer( 'dtnwp-ajax-nonce', 'security' );
+			// Store it in the options table
+			update_option( 'dtbwp_update_notice', time() );
+		}
+
+		public function admin_theme_auth_notice() {
+
+
+			if(function_exists('envato_market')) {
+				$option = envato_market()->get_options();
+
+				$envato_items = get_option( 'envato_setup_wizard', array() );
+
+				if ( !$option || empty($option['oauth']) || empty( $option['oauth'][ $this->envato_username ] ) || empty($envato_items) || empty($envato_items['items'])) {
+
+					// we show an admin notice if it hasn't been dismissed
+					$dissmissed_time = get_option('dtbwp_update_notice', false );
+
+					if ( ! $dissmissed_time || $dissmissed_time < strtotime('-7 days') ) {
+						// Added the class "notice-my-class" so jQuery pick it up and pass via AJAX,
+						// and added "data-notice" attribute in order to track multiple / different notices
+						// multiple dismissible notice states ?>
+                        <div class="notice notice-warning notice-dtbwp-themeupdates is-dismissible">
+                            <p><?php
+                            _e( 'Please activate ThemeForest updates to ensure you have the latest version of this theme.' );
+                                ?></p>
+                            <p>
+                            <?php printf( __( '<a class="button button-primary" href="%s">Activate Updates</a>' ),  esc_url($this->get_oauth_login_url( admin_url( 'admin.php?page=' . envato_market()->get_slug() . '' ) ) ) ); ?>
+                            </p>
+                        </div>
+                        <script type="text/javascript">
+                            jQuery(function($) {
+                                $( document ).on( 'click', '.notice-dtbwp-themeupdates .notice-dismiss', function () {
+                                    $.ajax( ajaxurl,
+                                        {
+                                            type: 'POST',
+                                            data: {
+                                                action: 'dtbwp_update_notice_handler',
+                                                security: '<?php echo wp_create_nonce( "dtnwp-ajax-nonce" ); ?>'
+                                            }
+                                        } );
+                                } );
+                            });
+                        </script>
+					<?php }
+
+				}
+			}
+
+
+
+		}
 		/**
 		 * @param $array1
 		 * @param $array2

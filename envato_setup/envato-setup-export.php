@@ -192,8 +192,9 @@ foreach ( $all_options as $name => $value ) {
 		$my_options[ $name ] = $value;
 	}
 	if ( 'theme_mods_theme-textdomain-here' === $name ) {
-		$my_options[ $name ] = maybe_unserialize($value);
-		unset($my_options[ $name ]['nav_menu_locations']);
+		$my_options[ $name ] = maybe_unserialize( $value );
+		$my_options[ $name . '-child' ] = maybe_unserialize( $value );
+		unset( $my_options[ $name ]['nav_menu_locations'] );
 	}
 }
 $my_options['dbem_credits']                        = 0;
