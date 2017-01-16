@@ -2836,7 +2836,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 
 				$envato_items = get_option( 'envato_setup_wizard', array() );
 
-				if ( !$option || empty($option['oauth']) || empty( $option['oauth'][ $this->envato_username ] ) || empty($envato_items) || empty($envato_items['items'])) {
+				if ( !$option || empty($option['oauth']) || empty( $option['oauth'][ $this->envato_username ] ) || empty($envato_items) || empty($envato_items['items']) || !envato_market()->items()->themes( 'purchased' )) {
 
 					// we show an admin notice if it hasn't been dismissed
 					$dissmissed_time = get_option('dtbwp_update_notice', false );
