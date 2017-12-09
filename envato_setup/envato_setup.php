@@ -237,10 +237,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			$this->default_theme_style = apply_filters( $this->theme_name . '_theme_setup_wizard_default_theme_style', ''  );
 
 			// create an images/styleX/ folder for each style here.
-			$this->site_styles = array(
-                'style1' => 'Style 1',
-                'style2' => 'Style 2',
-            );
+			$this->site_styles = apply_filters( $this->theme_name . '_theme_setup_wizard_site_styles', array() );
 
 			//If we have parent slug - set correct url
 			if ( $this->parent_slug !== '' ) {
