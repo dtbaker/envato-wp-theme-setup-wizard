@@ -133,6 +133,12 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 *
 		 */
 		public $site_styles = array();
+		
+		/**
+		 * @since 1.3.1
+		 *
+		 */
+		public $default_theme_style;
 
 		/**
 		 * Holds the current instance of the theme manager
@@ -178,7 +184,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 * @access public
 		 */
 		public function get_default_theme_style() {
-			return 'style1';
+			return $this->default_theme_style;
 		}
 
 		/**
@@ -227,6 +233,7 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 			$this->oauth_script    = apply_filters( $this->theme_name . '_theme_setup_wizard_oauth_script', 'http://dtbaker.net/files/envato/wptoken/server-script.php' );
 			$this->page_slug       = apply_filters( $this->theme_name . '_theme_setup_wizard_page_slug', $this->theme_name . '-setup' );
 			$this->parent_slug     = apply_filters( $this->theme_name . '_theme_setup_wizard_parent_slug', '' );
+			$this->default_theme_style = apply_filters( $this->theme_name . '_theme_setup_wizard_default_theme_style', ''  );
 
 			// create an images/styleX/ folder for each style here.
 			$this->site_styles = array(
