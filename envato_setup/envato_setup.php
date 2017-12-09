@@ -228,7 +228,8 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 */
 		public function init_globals() {
 			$current_theme         = wp_get_theme();
-			$this->theme_name      = strtolower( preg_replace( '#[^a-zA-Z]#', '', $current_theme->get( 'Name' ) ) );
+			$this->theme_name      = apply_filters( 'theme_setup_wizard_theme_name', strtolower( preg_replace( '#[^a-zA-Z]#', '', $current_theme->get( 'Name' ) ) ) );
+			$this->theme_slug      = apply_filters( 'theme_setup_wizard_theme_slug', strtolower( preg_replace( '#[^a-zA-Z]#', '-', $current_theme->get( 'Name' ) ) ) );
 			$this->envato_username = apply_filters( $this->theme_name . '_theme_setup_wizard_username', 'dtbaker' );
 			$this->oauth_script    = apply_filters( $this->theme_name . '_theme_setup_wizard_oauth_script', 'http://dtbaker.net/files/envato/wptoken/server-script.php' );
 			$this->page_slug       = apply_filters( $this->theme_name . '_theme_setup_wizard_page_slug', $this->theme_name . '-setup' );
