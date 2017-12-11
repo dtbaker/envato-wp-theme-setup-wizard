@@ -184,7 +184,15 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 * @access public
 		 */
 		public function get_default_theme_style() {
-			return $this->default_theme_style;
+			if( $this->default_theme_style ){
+				return $this->default_theme_style;
+			}elseif( $this->site_styles && count($this->site_styles) > 0 ){
+				foreach ( $this->site_styles as $style_name => $style_data ) {
+					return $style_name;
+				}
+			}else{
+				return false;
+			}
 		}
 
 		/**
