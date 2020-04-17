@@ -10,6 +10,19 @@
 
 // Also change the json export path near the bottom: theme/plugins/envato_setup/content/
 
+require_once(ABSPATH . 'wp-admin/includes/file.php');
+require_once(ABSPATH . 'wp-admin/includes/class-wp-filesystem-base.php');
+
+
+// Export Path(s)
+$export_path = trailingslashit(WP_CONTENT_DIR) . 'theme_setup_wizard_export';
+$export_images_path = trailingslashit($export_path) . 'images';
+$export_content_path = trailingslashit($export_path) . 'content';
+
+// if directory didn't exist, let's create it
+if( !is_dir($export_content_path) ) wp_mkdir_p($export_content_path);
+if( !is_dir($export_images_path) ) wp_mkdir_p($export_images_path);
+
 $default_content = array();
 $post_types      = array( 'attachment', 'wpcf7_contact_form', 'post', 'page' );
 foreach ( get_post_types() as $post_type ) {
@@ -98,8 +111,8 @@ foreach ( $post_types as $post_type ) {
 					}
 				}
 				$post_data->guid = wp_get_attachment_url( $post_data->ID );
-				if ( is_dir( get_home_path() . '/../theme/images/stock/' ) ) {
-					copy( $file, get_home_path() . '/../theme/images/stock/' . basename( $file ) );
+				if ( is_dir( $export_images_path ) ) {
+					copy( $file, trailingslashit($export_images_path) . basename( $file ) );
 				}
 			}
 			// fix for incorrect GUID when renaming files with the rename plugin, causes import to bust.
@@ -204,25 +217,31 @@ $my_options['woocommerce_enable_ajax_add_to_cart'] = 'no';
 //$my_options['tt-font-google-api-key']              = 'AIzaSyBsnYWO4SSibatp0SjsU9D2aZ6urI-_cJ8';
 $my_options                                        = $this->filter_options( $my_options );
 
-$dir = get_home_path() . '/../theme/plugins/envato_setup/content/';
-
-if ( is_dir( $dir ) ) {
+if ( is_dir( $export_content_path ) ) {
 
 	// which style are we writing to?
-    $stylefolder = basename(get_theme_mod('dtbwp_site_style',$this->get_default_theme_style()));
-    if($stylefolder){
-	    $dir .= $stylefolder .'/';
-    }
-
-	file_put_contents( $dir . 'default.json' , json_encode( $default_content ) );
-	file_put_contents( $dir . 'widget_positions.json' , json_encode( $widget_positions ) );
-	file_put_contents( $dir . 'widget_options.json' , json_encode( $widget_options ) );
-	file_put_contents( $dir . 'menu.json' , json_encode( $menu_ids ) );
-	file_put_contents( $dir . 'options.json' , json_encode( $my_options ) );
+	$stylefolder = basename(get_theme_mod('dtbwp_site_style',$this->get_default_theme_style()));
+	if($stylefolder){
+		$export_content_path = trailingslashit($export_content_path).$stylefolder;
+		if( !is_dir($export_content_path) ) {
+			wp_mkdir_p($export_content_path); // if directory didn't exist, let's create it
+		}
+	}
+	file_put_contents( trailingslashit($export_content_path) . 'default.json' , json_encode( $default_content ) );
+	file_put_contents( trailingslashit($export_content_path) . 'widget_positions.json' , json_encode( $widget_positions ) );
+	file_put_contents( trailingslashit($export_content_path) . 'widget_options.json' , json_encode( $widget_options ) );
+	file_put_contents( trailingslashit($export_content_path) . 'menu.json' , json_encode( $menu_ids ) );
+	file_put_contents( trailingslashit($export_content_path) . 'options.json' , json_encode( $my_options ) );
 }
 
 ?>
-	<h1>Export Done:</h1>
-	<p>Export content has been placed into /theme/plugins/envato_setup/content/*.json files</p>
-	<p>Stock images have been copied into /theme/images/stock/ for faster theme install.</p>
+	<h1><?php echo esc_html__('Export Done', 'text_domain');?>:</h1>
+	<p>
+		<?php echo esc_html__('Export content has been placed into below folder.', 'text_domain');?><br>
+		<em><?php echo $export_content_path;?></em>
+	</p>
+	<p>
+		<?php echo esc_html__('Stock images have been copied into below folder for faster theme install.', 'text_domain');?><br>
+		<em><?php echo $export_images_path;?></em>
+	</p>
 <?php

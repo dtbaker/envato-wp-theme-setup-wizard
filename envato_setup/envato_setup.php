@@ -133,6 +133,12 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 *
 		 */
 		public $site_styles = array();
+		
+		/**
+		 * @since 1.3.1
+		 *
+		 */
+		public $default_theme_style;
 
 		/**
 		 * Holds the current instance of the theme manager
@@ -178,7 +184,15 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 * @access public
 		 */
 		public function get_default_theme_style() {
-			return 'style1';
+			if( $this->default_theme_style ){
+				return $this->default_theme_style;
+			}elseif( $this->site_styles && count($this->site_styles) > 0 ){
+				foreach ( $this->site_styles as $style_name => $style_data ) {
+					return $style_name;
+				}
+			}else{
+				return false;
+			}
 		}
 
 		/**
@@ -222,17 +236,16 @@ if ( ! class_exists( 'Envato_Theme_Setup_Wizard' ) ) {
 		 */
 		public function init_globals() {
 			$current_theme         = wp_get_theme();
-			$this->theme_name      = strtolower( preg_replace( '#[^a-zA-Z]#', '', $current_theme->get( 'Name' ) ) );
+			$this->theme_name      = apply_filters( 'theme_setup_wizard_theme_name', strtolower( preg_replace( '#[^a-zA-Z]#', '', $current_theme->get( 'Name' ) ) ) );
+			$this->theme_slug      = apply_filters( 'theme_setup_wizard_theme_slug', strtolower( preg_replace( '#[^a-zA-Z]#', '-', $current_theme->get( 'Name' ) ) ) );
 			$this->envato_username = apply_filters( $this->theme_name . '_theme_setup_wizard_username', 'dtbaker' );
 			$this->oauth_script    = apply_filters( $this->theme_name . '_theme_setup_wizard_oauth_script', 'http://dtbaker.net/files/envato/wptoken/server-script.php' );
 			$this->page_slug       = apply_filters( $this->theme_name . '_theme_setup_wizard_page_slug', $this->theme_name . '-setup' );
 			$this->parent_slug     = apply_filters( $this->theme_name . '_theme_setup_wizard_parent_slug', '' );
+			$this->default_theme_style = apply_filters( $this->theme_name . '_theme_setup_wizard_default_theme_style', ''  );
 
 			// create an images/styleX/ folder for each style here.
-			$this->site_styles = array(
-                'style1' => 'Style 1',
-                'style2' => 'Style 2',
-            );
+			$this->site_styles = apply_filters( $this->theme_name . '_theme_setup_wizard_site_styles', array() );
 
 			//If we have parent slug - set correct url
 			if ( $this->parent_slug !== '' ) {
